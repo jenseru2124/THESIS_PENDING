@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register - Towin's Foodtrip</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/register.css">
+    
+</head>
+<body>
+    <div class="register-wrapper">
+        <div class="register-container">
+            <!-- Logo Section -->
+            <div class="logo-section">
+                <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo" class="register-logo-top">
+                <h1>Towin's Foodtrip</h1>
+                <p class="subtitle">Create your account to get started</p>
+            </div>
+
+            <!-- Register Form -->
+            <form action="/php/register.php" method="POST" autocomplete="off">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input 
+                        type="text" 
+                        id="name"
+                        name="name" 
+                        placeholder="e.g. Juan Dela Cruz" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input 
+                        type="text" 
+                        id="username"
+                        name="username" 
+                        placeholder="Enter your username" 
+                        required
+                        autocomplete="username"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input 
+                        type="email" 
+                        id="email"
+                        name="email" 
+                        placeholder="Enter your email" 
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input 
+                        type="password" 
+                        id="password"
+                        name="password" 
+                        placeholder="Enter your password" 
+                        required
+                        autocomplete="new-password"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input 
+                        type="password" 
+                        id="confirm_password"
+                        name="confirm_password" 
+                        placeholder="Confirm your password" 
+                        required
+                        autocomplete="new-password"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="address">Address</label>
+                    <textarea 
+                        id="address"
+                        name="address" 
+                        placeholder="Enter your address" 
+                        required
+                    ></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="cellphone_number">Cellphone Number</label>
+                    <input 
+                        type="text" 
+                        id="cellphone_number"
+                        name="cellphone_number" 
+                        placeholder="09XXXXXXXXX" 
+                        required
+                    >
+                </div>
+
+                <button type="submit">Create Account</button>
+            </form>
+
+            <!-- Login Link Section -->
+            <div class="login-link">
+                <p class="login-text">Already have an account?</p>
+                <p><a href="/html/index.html">Sign in here</a></p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

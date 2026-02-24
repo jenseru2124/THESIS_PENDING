@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insert Product - Towin's Foodtrip</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Poppins:400,600,700|Montserrat:400,600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/insert_product.css">
+   
+  
+</head>
+<body>
+
+<div class="container">
+    <!-- Logo Section -->
+    <div class="logo-section">
+        <div class="logo-container">
+            <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo" class="logo-img">
+        </div>
+        <div class="logo-text">Towin's Foodtrip</div>
+        <div class="logo-subtitle">Product Management System</div>
+    </div>
+
+    <!-- Form Header -->
+    <div class="form-header">
+        <div class="back-button-row">
+            <button class="indexbtn" type="button" onclick="window.location.href='/html/billing.html'">← Back</button>
+        </div>
+        <span class="form-title">Insert Product</span>
+    </div>
+
+    <hr class="form-divider">
+
+    <!-- Main Form -->
+    <form id="stockForm" autocomplete="off" enctype="multipart/form-data">
+        <div id="msgBox"></div>
+
+        <!-- Category Dropdown -->
+        <div class="input-group">
+            <label for="category">Category:</label>
+            <select id="category" name="category" required>
+                <option value="">-- Select Category --</option>
+                <option value="SILOG MEALS">🍚 SILOG MEALS</option>
+                <option value="SIZZLER">🍳 SIZZLER</option>
+                <option value="GOTO">🥘 GOTO</option>
+                <option value="PARES">🍲 PARES</option>
+                <option value="DRINKS">🥤 DRINKS</option>
+                <option value="DESSERTS">🍰 DESSERTS</option>
+                <option value="SOUP">🍵 SOUP</option>
+                <option value="RICE MEALS">🍛 RICE MEALS</option>
+                <option value="ADD-ONS">➕ ADD-ONS</option>
+            </select>
+        </div>
+
+        <!-- Product Name Input -->
+        <div class="input-group">
+            <label for="name">Name:</label>
+            <input 
+                type="text" 
+                id="name" 
+                name="name"
+                placeholder="e.g., Pork Silog, Bangsilog..."
+                required
+            >
+        </div>
+
+        <!-- Price Input -->
+        <div class="input-group">
+            <label for="price">Price (PHP):</label>
+            <input 
+                type="number" 
+                id="price" 
+                name="price"
+                placeholder="e.g., 95.00"
+                step="0.01"
+                min="0"
+                required
+            >
+        </div>
+
+        <!-- Image Upload -->
+        <div class="input-group">
+            <label for="image">Image:</label>
+            <input 
+                type="file" 
+                id="image" 
+                name="image" 
+                accept="image/*"
+                required
+            >
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit">Insert Product</button>
+    </form>
+</div>
+
+<script>
+    $(document).ready(function () {
+        // Load categories from database
+        $.ajax({
+            url: "/php/fetch_categories.php",
+            type: "GET",
+            dataType: "json",
+            success: function(categories) {
+                const categorySelect = $("#category");
+                categorySelect.html('<option value="">-- Select Category --</option>');
+                
+                categories.forEach(function(cat) {
+                    categorySelect.append(
+                        `<option value="${cat.name}">${cat.icon ? cat.icon + ' ' : ''}${cat.name}</option>`
+                    );
+                });
+            },
+            error: function() {
+                console.log('Using default categories');
+            }
+        });
+
+        // Form submission
+        $("#stockForm").on("submit", function (e) {
+            e.preventDefault();
+            $("#msgBox").html(""); // Clear previous messages
+            var formData = new FormData(this);
+            $.ajax({
+                url: "/php/insert.php",
+                type: "POST",
+                data: formData,
+                contentType: false,
+                processData: false,
+                success: function (response) {
+                    const categoryText = $("#category option:selected").text();
+                    $("#msgBox").html('<div class="success-message">✓ Product inserted successfully with price: ₱' + $("#price").val() + '</div>');
+                    $("#stockForm")[0].reset();
+                    
+                    // Auto-clear message after 3 seconds
+                    setTimeout(() => {
+                        $("#msgBox").fadeOut(400, function() {
+                            $(this).html('').show();
+                        });
+                    }, 3000);
+                },
+                error: function () {
+                    $("#msgBox").html('<div class="error-message">✕ There was an error inserting the product.</div>');
+                }
+            });
+        });
+    });
+</script>
+
+</body>
+</html>

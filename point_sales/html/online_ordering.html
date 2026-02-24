@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Towin's Foodtrip - Online Ordering</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&family=Montserrat:wght@900&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="/css/online_ordering.css">
+    
+    <style>
+        /* ===== CART ADDED ALERT STYLING ===== */
+        .cart-alert {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(90deg, #4caf50 0%, #45a049 100%);
+            color: #fff;
+            padding: 14px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(76, 175, 80, 0.4);
+            font-size: 0.95em;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateX(400px);
+            transition: all 0.3s ease;
+            font-family: 'Poppins', 'Montserrat', Arial, sans-serif;
+            border-left: 4px solid #fff;
+            max-width: 300px;
+            word-wrap: break-word;
+        }
+
+        .cart-alert.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        /* ===== RESPONSIVE ALERT ===== */
+        @media (max-width: 768px) {
+            .cart-alert {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: calc(100% - 20px);
+                font-size: 0.85em;
+                padding: 12px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-layout">
+        <!-- SIDEBAR NAVIGATION -->
+        <nav class="sidebar">
+            <div class="sidebar-logo">
+                <img src="towins_logo.jpg" alt="Towin's Foodtrip logo">
+            </div>
+            
+            <div class="logo-section">
+                <div class="logo-title">Towin's</div>
+                <div class="sidebar-desc" id="user-display">FOODTRIP<br>PORK SISIG • GOTO PARES</div>
+            </div>
+
+            <div class="sidebar-nav">
+                <a href="/html/online_ordering.html" class="active">🛍️ Online Order</a>
+                <a href="/html/profile.html">👤 My Profile</a>
+                <a href="/html/my_orders.html">📦 My Orders</a>
+            </div>
+
+            <a href="/html/logout.html" class="logout-btn">🚪 Logout</a>
+        </nav>
+
+        <!-- MAIN CONTENT AREA -->
+        <div class="content-area">
+            <div class="main-content">
+                <h1>Made with Love ❤️</h1>
+                <div class="category-filter-bar" id="category-filter-bar"></div>
+                <div id="menu-container"></div>
+            </div>
+
+            <!-- SHOPPING CART SIDEBAR -->
+            <div class="cart">
+                <h3>🛒 Your Cart</h3>
+                <ul id="cart-items"></ul>
+                <p>Total: <span id="cart-total">0.00</span> PHP</p>
+                <div class="cart-buttons">
+                    <button id="checkout-btn" class="checkout-btn" onclick="openCheckoutModal()" disabled>✅ Checkout</button>
+                    <button onclick="clearCart()" class="clear-btn">🗑️ Clear</button>
+                </div>
+                <div id="order-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CHECKOUT MODAL -->
+    <div id="checkoutModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeCheckoutModal()">&times;</span>
+            <h2>Complete Your Order</h2>
+            
+            <div class="order-summary">
+                <h3>Order Summary</h3>
+                <div id="summary-items"></div>
+                <div class="summary-total">
+                    <span>Total:</span>
+                    <span id="summary-total">0.00 PHP</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>📍 Delivery Address *</label>
+                <textarea id="delivery-address" placeholder="Enter your full delivery address" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>📱 Phone Number *</label>
+                <input type="tel" id="phone-number" placeholder="09XXXXXXXXX" required>
+            </div>
+
+            <div class="form-group">
+                <label>💳 Payment Method *</label>
+                <div class="payment-options">
+                    <div class="payment-option">
+                        <input type="radio" id="gcash" name="payment_method" value="gcash" required>
+                        <label for="gcash">💰 GCash</label>
+                    </div>
+                    <div class="payment-option">
+                        <input type="radio" id="cod" name="payment_method" value="cod">
+                        <label for="cod">💵 Cash on Delivery</label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="gcash-info">
+                <strong>GCash Payment Instructions:</strong>
+                <p>
+                    🔹 Send payment to: <strong>0917-XXX-XXXX</strong><br>
+                    🔹 Reference: Your Order ID<br>
+                    🔹 Order prepared upon payment verification
+                </p>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="confirm-btn" onclick="placeOrder()">✅ Place Order</button>
+                <button class="cancel-btn" onclick="closeCheckoutModal()">❌ Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let cart = [];
+        let cartTotal = 0;
+        let allProducts = [];
+        let selectedCategory = "All";
+        let userProfile = {};
+
+        // Load user profile and display user info
+        function loadUserProfile() {
+            fetch('/php/check_session.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.logged_in) {
+                        // Fetch full user details from profile_api.php
+                        fetch('/php/profile_api.php?action=get')
+                            .then(response => response.json())
+                            .then(profile => {
+                                userProfile = profile;
+                                
+                                // Display user name in sidebar
+                                const userDisplay = document.getElementById('user-display');
+                                if (profile.name) {
+                                    userDisplay.innerHTML = `${profile.name.toUpperCase()}<br><small style="font-size: 11px; color: #999;">${profile.role.toUpperCase()}</small>`;
+                                }
+                            })
+                            .catch(error => console.log('Error loading profile:', error));
+                    } else {
+                        // Not logged in, redirect to login
+                        window.location.href = '/html/index.html';
+                    }
+                })
+                .catch(error => {
+                    console.log('Error checking session:', error);
+                    window.location.href = '/html/index.html';
+                });
+        }
+
+        function renderCategoryFilter(categories) {
+            const bar = document.getElementById('category-filter-bar');
+            bar.innerHTML = `<span class="category-filter-label">Filter:</span>`;
+            
+            let allBtn = document.createElement("button");
+            allBtn.className = "category-btn" + (selectedCategory === "All" ? " selected" : "");
+            allBtn.textContent = "All";
+            allBtn.onclick = () => { selectedCategory = "All"; renderMenuItems(); renderCategoryFilter(categories); };
+            bar.appendChild(allBtn);
+            
+            categories.forEach(c => {
+                let btn = document.createElement("button");
+                btn.className = "category-btn" + (selectedCategory === c ? " selected" : "");
+                btn.textContent = c;
+                btn.onclick = () => { selectedCategory = c; renderMenuItems(); renderCategoryFilter(categories); };
+                bar.appendChild(btn);
+            });
+        }
+
+        function renderMenuItems() {
+            let menuContainer = document.getElementById("menu-container");
+            menuContainer.innerHTML = '';
+            let filtered = selectedCategory === "All"
+                ? allProducts
+                : allProducts.filter(product => (product.category || "").toLowerCase() === selectedCategory.toLowerCase());
+            
+            if (filtered.length === 0) {
+                menuContainer.innerHTML = "<div style='color:#b23b21;font-size:1em;padding:20px;grid-column:1/-1;'>No items for this category.</div>";
+                return;
+            }
+            
+            filtered.forEach(product => {
+                menuContainer.innerHTML += `
+                    <div class='menu-item'>
+                        <img src='${product.image}' alt='${product.name}'>
+                        <strong>${product.name}</strong>
+                        <span class="category-band">${product.category}</span>
+                        <div class="desc">${product.description || ""}</div>
+                        <span class="price">₱${product.price}</span>
+                        <button onclick='addToCart(${JSON.stringify(product)})'>Add to Cart</button>
+                    </div>
+                `;
+            });
+        }
+
+        function addToCart(item) {
+            let newItem = { ...item };
+            let existingItem = cart.find(cartItem => cartItem.product_id === newItem.product_id);
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                newItem.quantity = 1;
+                cart.push(newItem);
+            }
+            updateCartUI();
+            
+            // ===== SHOW ALERT =====
+            showAddedToCartAlert(newItem.name, newItem.price);
+        }
+
+        // ===== ALERT FUNCTION =====
+        function showAddedToCartAlert(itemName, itemPrice) {
+            // Create alert element
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'cart-alert';
+            alertDiv.innerHTML = `
+                <span style="font-size: 1.5em; margin-right: 8px;">✅</span>
+                <strong>${itemName}</strong> added to cart
+                <span style="font-size: 0.9em; color: #ddd; margin-left: 10px;">₱${itemPrice.toFixed(2)}</span>
+            `;
+            
+            // Add to body
+            document.body.appendChild(alertDiv);
+            
+            // Trigger animation
+            setTimeout(() => alertDiv.classList.add('show'), 10);
+            
+            // Remove after 2 seconds
+            setTimeout(() => {
+                alertDiv.classList.remove('show');
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 2000);
+        }
+
+        function removeFromCart(productId) {
+            productId = Number(productId);
+            cart = cart.filter(item => Number(item.product_id) !== productId);
+            updateCartUI();
+        }
+
+        function decreaseQuantity(productId) {
+            productId = Number(productId);
+            let item = cart.find(item => Number(item.product_id) === productId);
+            if (item) {
+                if (item.quantity > 1) {
+                    item.quantity -= 1;
+                } else {
+                    cart = cart.filter(item => Number(item.product_id) !== productId);
+                }
+                updateCartUI();
+            }
+        }
+
+        function increaseQuantity(productId) {
+            productId = Number(productId);
+            let item = cart.find(item => Number(item.product_id) === productId);
+            if (item) {
+                item.quantity += 1;
+                updateCartUI();
+            }
+        }
+
+        function updateCartUI() {
+            let cartItemsList = document.getElementById('cart-items');
+            let cartTotalElement = document.getElementById('cart-total');
+            let checkoutBtn = document.getElementById('checkout-btn');
+            cartItemsList.innerHTML = '';
+            cartTotal = 0;
+
+            if (cart.length === 0) {
+                checkoutBtn.disabled = true;
+                cartItemsList.innerHTML = '<li style="text-align:center;color:#999;padding:20px;">Your cart is empty</li>';
+            } else {
+                checkoutBtn.disabled = false;
+            }
+
+            cart.forEach(item => {
+                let itemTotal = item.price * item.quantity;
+                cartTotal += itemTotal;
+                cartItemsList.innerHTML += `
+                    <li>
+                        <span class="cart-item-info">
+                            <strong>${item.name}</strong>
+                            <span class="category-band">${item.category}</span>
+                            <div class="quantity-price">${item.quantity} x ₱${item.price}</div>
+                        </span>
+                        <span class="cart-item-actions">
+                            <span class="cart-price">₱${itemTotal.toFixed(2)}</span>
+                            <button class="cart-action-btn" onclick="decreaseQuantity(${item.product_id})">−</button>
+                            <button class="cart-action-btn" onclick="increaseQuantity(${item.product_id})">+</button>
+                            <button class="cart-action-btn" onclick="removeFromCart(${item.product_id})">✕</button>
+                        </span>
+                    </li>
+                `;
+            });
+            cartTotalElement.textContent = cartTotal.toFixed(2);
+        }
+
+        function openCheckoutModal() {
+            if (cart.length === 0) {
+                alert("Your cart is empty. Please add items before checking out.");
+                return;
+            }
+
+            let summaryHTML = '';
+            cart.forEach(item => {
+                let itemTotal = item.price * item.quantity;
+                summaryHTML += `
+                    <div class="summary-item">
+                        <span>${item.quantity}x ${item.name}</span>
+                        <span>₱${itemTotal.toFixed(2)}</span>
+                    </div>
+                `;
+            });
+            document.getElementById('summary-items').innerHTML = summaryHTML;
+            document.getElementById('summary-total').textContent = '₱' + cartTotal.toFixed(2);
+
+            // Pre-fill delivery address and phone number from user profile
+            const addressInput = document.getElementById('delivery-address');
+            const phoneInput = document.getElementById('phone-number');
+            
+            // Set values from userProfile object
+            addressInput.value = userProfile.address || '';
+            phoneInput.value = userProfile.cellphone_number || '';
+
+            document.getElementById('checkoutModal').style.display = 'block';
+        }
+
+        function closeCheckoutModal() {
+            document.getElementById('checkoutModal').style.display = 'none';
+            document.getElementById('order-message').textContent = '';
+        }
+
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'payment_method') {
+                const gcashInfo = document.getElementById('gcash-info');
+                if (e.target.value === 'gcash') {
+                    gcashInfo.style.display = 'block';
+                } else {
+                    gcashInfo.style.display = 'none';
+                }
+            }
+        });
+
+        function placeOrder() {
+            const deliveryAddress = document.getElementById('delivery-address').value.trim();
+            const phoneNumber = document.getElementById('phone-number').value.trim();
+            const paymentMethod = document.querySelector('input[name="payment_method"]:checked');
+
+            if (!deliveryAddress) {
+                alert('Please enter your delivery address');
+                return;
+            }
+            if (!phoneNumber) {
+                alert('Please enter your phone number');
+                return;
+            }
+            if (!paymentMethod) {
+                alert('Please select a payment method');
+                return;
+            }
+
+            const phoneRegex = /^09\d{9}$/;
+            if (!phoneRegex.test(phoneNumber)) {
+                alert('Please enter a valid phone number (09XXXXXXXXX)');
+                return;
+            }
+
+            // Show loading state
+            const checkoutBtn = document.querySelector('.confirm-btn');
+            checkoutBtn.disabled = true;
+            checkoutBtn.textContent = '⏳ Processing...';
+
+            const orderData = {
+                items: cart,
+                total: cartTotal,
+                payment_method: paymentMethod.value,
+                delivery_address: deliveryAddress,
+                phone_number: phoneNumber
+            };
+
+            console.log('Sending order data:', orderData);
+
+            fetch('/php/place_order.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            })
+            .then(response => {
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Response data:', data);
+
+                if (data.success) {
+                    closeCheckoutModal();
+                    clearCart();
+                    const orderMsg = document.getElementById('order-message');
+                    orderMsg.style.color = "#28a745";
+                    orderMsg.innerHTML = `
+                        ✅ <strong>Order placed successfully!</strong><br>
+                        Order ID: <strong>#${data.order_id}</strong><br>
+                        Payment: ${data.payment_method === 'gcash' ? '💰 GCash' : '💵 Cash on Delivery'}<br>
+                        <em>Redirecting to your orders in 2 seconds...</em>
+                    `;
+                    
+                    setTimeout(() => {
+                        window.location.href = '/html/my_orders.html';
+                    }, 2000);
+                } else {
+                    alert('❌ Error: ' + (data.message || 'Failed to place order'));
+                    checkoutBtn.disabled = false;
+                    checkoutBtn.textContent = '✅ Place Order';
+                }
+            })
+            .catch(error => {
+                console.error('Fetch error:', error);
+                alert('❌ Error placing order: ' + error.message + '\n\nCheck the browser console for details.');
+                checkoutBtn.disabled = false;
+                checkoutBtn.textContent = '✅ Place Order';
+            });
+        }
+
+        function clearCart() {
+            cart = [];
+            updateCartUI();
+        }
+
+        window.onclick = function(event) {
+            let modal = document.getElementById('checkoutModal');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        document.addEventListener("DOMContentLoaded", function () {
+            // Load user profile first and check if logged in
+            loadUserProfile();
+
+            fetch("/php/get_cart.php")
+                .then(response => response.json())
+                .then(items => {
+                    cart = Array.isArray(items) ? items : [];
+                    updateCartUI();
+                })
+                .catch(() => {
+                    cart = [];
+                    updateCartUI();
+                });
+
+            fetch("/php/get_products.php")
+                .then(response => response.json())
+                .then(products => {
+                    allProducts = products || [];
+                    let categories = [...new Set(allProducts.map(p => (p.category || "").trim()).filter(Boolean))];
+                    categories.sort((a,b) => a.localeCompare(b));
+                    renderCategoryFilter(categories);
+                    renderMenuItems();
+                })
+                .catch(error => {
+                    document.getElementById("menu-container").innerHTML = "<div style='color:#b23b21;'>Unable to load menu.</div>";
+                });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+* {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            font-family: 'Segoe UI', 'Arial', sans-serif;
+            background: linear-gradient(135deg, #fffbe8 0%, #f5f8fb 100%);
+            min-height: 100vh;
+            color: #231f20;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 30px auto;
+            background: #fff;
+            border: 3px solid #231f20;
+            border-radius: 18px;
+            padding: 30px 25px;
+            box-shadow: 0 7px 29px #231f201f;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-img img {
+            height: 80px;
+            border-radius: 12px;
+            background: #fff;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .logo-info h1 {
+            color: #b23b21;
+            font-family: 'Poppins', 'Montserrat', Arial, sans-serif;
+            font-size: 1.8em;
+            margin: 0;
+            letter-spacing: 1px;
+        }
+
+        .logo-info p {
+            margin: 5px 0 0 0;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-details {
+            text-align: right;
+        }
+
+        .user-details h3 {
+            color: #333;
+            margin: 0;
+            font-size: 1.1em;
+        }
+
+        .user-details p {
+            color: #999;
+            font-size: 0.85em;
+            margin: 3px 0 0 0;
+        }
+
+        .logout-btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: linear-gradient(93deg, #fdc7c7 60%, #b23b21 100%);
+            color: #231f20;
+            border: 2.5px solid #231f20;
+            border-radius: 8px;
+            font-size: 0.95em;
+            font-family: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-weight: 700;
+        }
+
+        .logout-btn:hover {
+            background: #b23b21;
+            color: #fff;
+            transform: scale(1.02);
+        }
+
+        .restaurant-info {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #fff;
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .restaurant-info h3 {
+            margin: 0;
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
+        .restaurant-info p {
+            margin: 4px 0 0 0;
+            font-size: 0.9em;
+            opacity: 0.95;
+        }
+
+        .restaurant-btn {
+            background: #fff;
+            color: #667eea;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.3s;
+        }
+
+        .restaurant-btn:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #fdc7c7 0%, #fff7e3 100%);
+            border: 2px solid #b23b21;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #b23b21;
+            margin: 0 0 8px 0;
+            font-size: 0.9em;
+        }
+
+        .stat-card .number {
+            color: #231f20;
+            font-size: 1.8em;
+            font-weight: 800;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background: #fff;
+        }
+
+        th, td {
+            padding: 12px 10px;
+            text-align: left;
+            border-bottom: 1px solid #fdc7c7;
+        }
+
+        th {
+            background: linear-gradient(93deg, #fdc7c7 60%, #b23b21 100%);
+            color: #231f20;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+        }
+
+        tr:hover {
+            background: #fff7e3;
+        }
+
+        .order-item-summary {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        .delivery-status {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: 700;
+        }
+
+        .status-pending {
+            background: #fff7e3;
+            color: #b23b21;
+            border: 1px solid #b23b21;
+        }
+
+        .status-delivered {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #155724;
+        }
+
+        .status-dropdown {
+            padding: 6px 10px;
+            border: 2px solid #231f20;
+            border-radius: 6px;
+            background: #f9f9f9;
+            color: #231f20;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-family: inherit;
+        }
+
+        .status-dropdown:focus {
+            outline: none;
+            background: #fff;
+            border-color: #b23b21;
+        }
+
+        /* ===== ADDRESS LINK STYLING ===== */
+        .address-link {
+            color: #b23b21;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-bottom: 2px solid transparent;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .address-link:hover {
+            color: #77230b;
+            border-bottom: 2px solid #b23b21;
+            transform: scale(1.03);
+        }
+
+        .address-link::before {
+            content: "🗺️";
+            font-size: 1.1em;
+        }
+
+        .phone-link {
+            color: #b23b21;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .phone-link:hover {
+            color: #77230b;
+            text-decoration: underline;
+        }
+
+        .phone-link::before {
+            content: "📞";
+            font-size: 1.1em;
+        }
+
+        #no-orders-msg {
+            display: none;
+            text-align: center;
+            color: #b23b21;
+            margin-top: 40px;
+            font-size: 1.1em;
+            font-weight: 500;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px 12px;
+            }
+
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .logo-section {
+                width: 100%;
+            }
+
+            .user-info {
+                flex-direction: column;
+                align-items: flex-start;
+                width: 100%;
+            }
+
+            .user-details {
+                text-align: left;
+            }
+
+            .restaurant-info {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .restaurant-btn {
+                width: 100%;
+            }
+
+            table {
+                font-size: 0.9em;
+            }
+
+            th, td {
+                padding: 8px 6px;
+            }
+        }

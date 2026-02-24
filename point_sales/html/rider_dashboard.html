@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Towin's Foodtrip - Rider Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&family=Montserrat:wght@900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/rider_dashboard.css">
+    
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo-img">
+                    <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo">
+                </div>
+                <div class="logo-info">
+                    <h1>Towin's Foodtrip</h1>
+                    <p>🏍️ Rider Dashboard</p>
+                </div>
+            </div>
+
+            <div class="user-info">
+                <div class="user-details">
+                    <h3 id="rider-name">Loading...</h3>
+                    <p id="rider-role">Rider</p>
+                </div>
+                <a href="/php/logout.php" class="logout-btn">🚪 Logout</a>
+            </div>
+        </div>
+
+        <!-- ===== RESTAURANT LOCATION INFO ===== -->
+        <div class="restaurant-info">
+            <div>
+                <h3>🏪 Towin's Foodtrip (Starting Location)</h3>
+                <p>📍 75C4+3R Cabuyao City, Laguna</p>
+            </div>
+            <button class="restaurant-btn" onclick="openRestaurantLocation()">📍 View on Map</button>
+        </div>
+
+        <div class="stats" id="stats-container">
+            <div class="stat-card">
+                <h3>Total Orders</h3>
+                <div class="number" id="stat-total">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Pending</h3>
+                <div class="number" id="stat-pending">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Delivered</h3>
+                <div class="number" id="stat-delivered">0</div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Delivery Address</th>
+                    <th>Phone</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="rider-orders-body"></tbody>
+        </table>
+
+        <p id="no-orders-msg">No orders assigned to you.</p>
+    </div>
+
+    <script>
+        let allOrders = [];
+
+        // ===== RESTAURANT LOCATION (TOWIN'S FOODTRIP) =====
+        const RESTAURANT = {
+            name: "Towin's Foodtrip",
+            address: "75C4+3R Cabuyao City, Laguna",
+            lat: 14.349736,
+            lng: 121.008827,
+            plusCode: "75C4+3R Cabuyao City, Laguna",
+            mapsUrl: "https://maps.app.goo.gl/ZpPPZ2ubKgVnmLXa8"
+        };
+
+        // Load rider profile
+        function loadRiderProfile() {
+            fetch('/php/check_session.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.logged_in && (data.role === 'rider' || data.is_rider == 1)) {
+                        document.getElementById('rider-name').textContent = data.name || 'Rider';
+                        document.getElementById('rider-role').textContent = data.role.toUpperCase();
+                    } else {
+                        window.location.href = '/html/index.html';
+                    }
+                })
+                .catch(error => {
+                    console.log('Error loading profile:', error);
+                    window.location.href = '/html/index.html';
+                });
+        }   
+
+        // Load assigned orders
+        function loadRiderOrders() {
+            fetch('/php/get_rider_order.php')
+                .then(resp => resp.json())
+                .then(orders => {
+                    allOrders = orders || [];
+                    renderOrders();
+                    updateStats();
+                })
+                .catch(err => {
+                    console.error('Error loading orders:', err);
+                });
+        }
+
+        // Render orders in single table
+        function renderOrders() {
+            const tbody = document.getElementById('rider-orders-body');
+            const noMsg = document.getElementById('no-orders-msg');
+
+            if (allOrders.length === 0) {
+                tbody.innerHTML = '';
+                noMsg.style.display = 'block';
+                return;
+            }
+
+            noMsg.style.display = 'none';
+            tbody.innerHTML = '';
+
+            allOrders.forEach(order => {
+                const items = order.order_items || [];
+                const itemSummary = items.length > 0
+                    ? items.map(it => `${it.name} x${it.quantity}`).join(', ')
+                    : 'No items';
+
+                const statusClass = `status-${order.delivery_status}`;
+
+                const row = `
+                    <tr>
+                        <td><strong>#${order.order_id}</strong></td>
+                        <td>${order.username || 'N/A'}</td>
+                        <td>
+                            <div class="order-item-summary">${itemSummary}</div>
+                        </td>
+                        <td>₱${parseFloat(order.total_amount).toFixed(2)}</td>
+                        <td>
+                            <a class="address-link" onclick="openGoogleDirections('${encodeURIComponent(order.delivery_address || 'N/A')}'); return false;">
+                                ${order.delivery_address || 'N/A'}
+                            </a>
+                        </td>
+                        <td>
+                            <a class="phone-link" href="tel:${order.phone_number}">
+                                ${order.phone_number || 'N/A'}
+                            </a>
+                        </td>
+                        <td>
+                            <select class="status-dropdown" onchange="updateOrderStatus(${order.order_id}, this.value)">
+                                <option value="assigned" ${order.delivery_status === 'assigned' ? 'selected' : ''}>Pending</option>
+                                <option value="delivered" ${order.delivery_status === 'delivered' ? 'selected' : ''}>Delivered</option>
+                            </select>
+                        </td>
+                    </tr>
+                `;
+
+                tbody.innerHTML += row;
+            });
+        }
+
+        // ===== GOOGLE MAPS DIRECTIONS INTEGRATION (FIXED) =====
+        function openGoogleDirections(destinationAddress) {
+            if (destinationAddress === 'N/A' || !destinationAddress) {
+                alert('❌ Delivery address not available');
+                return;
+            }
+
+            // Decode the address
+            const decodedAddress = decodeURIComponent(destinationAddress);
+            
+            // Use Plus Code as origin - this is the most reliable method
+            // Format: https://www.google.com/maps/dir/ORIGIN/DESTINATION
+            const directionsUrl = `https://www.google.com/maps/dir/${encodeURIComponent(RESTAURANT.plusCode)}/${encodeURIComponent(decodedAddress)}`;
+            
+            console.log('🚗 Opening directions');
+            console.log('📍 From:', RESTAURANT.plusCode, '(Towin\'s Foodtrip)');
+            console.log('📍 To:', decodedAddress);
+            
+            // Open in new tab
+            window.open(directionsUrl, '_blank', 'width=800,height=600');
+        }
+
+        // ===== OPEN RESTAURANT LOCATION =====
+        function openRestaurantLocation() {
+            console.log('📍 Opening restaurant location:', RESTAURANT.address);
+            window.open(RESTAURANT.mapsUrl, '_blank');
+        }
+
+        // Update order status
+        function updateOrderStatus(orderId, newStatus) {
+            fetch('/php/update_rider_order.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `order_id=${encodeURIComponent(orderId)}&status=${encodeURIComponent(newStatus)}`
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.success) {
+                    // Reload orders to reflect changes
+                    loadRiderOrders();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Failed to update'));
+                    // Reload to revert the dropdown
+                    loadRiderOrders();
+                }
+            })
+            .catch(err => {
+                alert('Error: ' + err);
+                loadRiderOrders();
+            });
+        }
+
+        // Update stats
+        function updateStats() {
+            const total = allOrders.length;
+            const pending = allOrders.filter(o => o.delivery_status === 'assigned').length;
+            const delivered = allOrders.filter(o => o.delivery_status === 'delivered').length;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-pending').textContent = pending;
+            document.getElementById('stat-delivered').textContent = delivered;
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRiderProfile();
+            loadRiderOrders();
+            // Refresh every 3 seconds
+            setInterval(loadRiderOrders, 3000);
+        });
+    </script>
+</body>
+</html>

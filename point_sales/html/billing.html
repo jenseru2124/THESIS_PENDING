@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Billing System</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="../css/billing.css">
+</head>
+<body>
+    <!-- Sidebar Menu -->
+    <div class="sidebar">
+        <div class="logo-img">
+            <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo" />
+        </div>
+        <div class="logo-title">Towin's</div>
+        <div class="sidebar-desc">FOODTRIP</div>
+        <a href="../html/po_list.html" class="side-menu-link" id="link-po-list">📄 PO List</a>
+        <a href="../html/sales_chart.html" class="side-menu-link" id="link-sales-report">📊 Sales Report</a>
+        <a href="../html/analytics_display.html" class="side-menu-link" id="link-analytics">📊 Data Analytics</a>
+        <a href="../html/bestsellers.html" class="side-menu-link" id="link-bestsellers">📊 Best Sellers</a>
+        <a href="../html/insert_product.html" class="side-menu-link" id="link-add-menu">➕ Add New Menu</a>
+        <a href="../html/products.html" class="side-menu-link" id="link-update-menu">➕ Update Menu</a>
+        <a href="../html/users.html" class="side-menu-link" id="link-manage-users">📄 Manage User</a>
+        <a href="../html/logout.html" class="side-menu-link" id="link-logout">🚪 Logout</a>
+    </div>
+
+    <div class="main-flex">
+        <div class="left-panel">
+            <!-- Categories Section (Horizontal) -->
+            <div class="categories-scroll" id="categories"></div>
+            <!-- Items Grid FULL VIEW -->
+            <div class="items-grid" id="items"></div>
+        </div>
+        <!-- Billing Section -->
+        <div class="bill-panel" id="bill">
+            <h3>Bill</h3>
+            <table class="bill-table" id="order-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Subtotal</th>
+                        <th>Qty</th>
+                        <th>❌</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+
+            <div class="bill-summary">
+                <div class="bill-row">
+                    <label for="total">Total:</label>
+                    <input type="text" id="total" value="0.00" readonly>
+                </div>
+                <div class="bill-row">
+                    <label for="cash">Cash:</label>
+                    <input type="text" id="cash" value="0.00">
+                </div>
+                <div class="bill-row">
+                    <label for="balance">Change:</label>
+                    <input type="text" id="balance" value="0.00" readonly>
+                </div>
+            </div>
+            <select id="order-type">
+                <option value="Dine-In">Dine-In</option>
+                <option value="Takeaway">Takeaway</option>
+                <option value="Delivery">Delivery</option>
+            </select>
+            <div class="numpad">
+                <button class="num-btn">1</button>
+                <button class="num-btn">2</button>
+                <button class="num-btn">3</button>
+                <button class="num-btn">4</button>
+                <button class="num-btn">5</button>
+                <button class="num-btn">6</button>
+                <button class="num-btn">7</button>
+                <button class="num-btn">8</button>
+                <button class="num-btn">9</button>
+                <button id="clear">C</button>
+                <button class="num-btn">0</button>
+                <button id="enter">Enter</button>
+            </div>
+            <button id="checkout">Checkout</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CLEAR BILLING ORDER FROM SESSION
+        // ============================================
+        function clearBillingOrderFromSession() {
+            fetch('../php/clear_billing_order.php')
+                .then(resp => resp.json())
+                .then(data => {
+                    console.log('✅ Session cleared:', data);
+                })
+                .catch(err => console.error('Error clearing session:', err));
+        }
+
+        // ============================================
+        // LOAD BILLING ORDER FROM SESSION
+        // ============================================
+        function loadBillingOrderFromSession() {
+            fetch('../php/get_billing_order.php')
+                .then(resp => resp.json())
+                .then(data => {
+                    console.log('📥 Response from get_billing_order.php:', data);
+                    
+                    if (data.success) {
+                        console.log('✅ Order loaded from session');
+                        console.log('Order ID:', data.order_id);
+                        console.log('Order Data:', data.order_data);
+                        console.log('Items:', data.order_data.items);
+                        
+                        loadOrderToBilling(data.order_data);
+                    } else {
+                        console.warn('⚠️ No order in session:', data.error);
+                    }
+                })
+                .catch(err => {
+                    console.error('❌ Error loading billing order:', err);
+                });
+        }
+
+        // Function to load order data into billing table
+        function loadOrderToBilling(orderData) {
+            console.log('🔄 loadOrderToBilling called with:', orderData);
+            
+            if (!orderData || !orderData.items || !Array.isArray(orderData.items)) {
+                console.error('❌ Invalid order data structure');
+                return;
+            }
+
+            let tbody = document.querySelector("#order-table tbody");
+            tbody.innerHTML = '';
+            let total = 0;
+            
+            console.log(`📊 Processing ${orderData.items.length} items`);
+            
+            orderData.items.forEach((item, index) => {
+                console.log(`Item ${index}:`, item);
+                
+                const subtotal = item.price * item.quantity;
+                total += subtotal;
+                
+                let row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>₱${subtotal.toFixed(2)}</td>
+                    <td>${item.quantity}</td>
+                    <td><button class="delete-btn">X</button></td>
+                `;
+                tbody.appendChild(row);
+                
+                console.log(`✅ Added row: ${item.name} x${item.quantity} = ₱${subtotal.toFixed(2)}`);
+            });
+            
+            document.getElementById("total").value = total.toFixed(2);
+            document.getElementById("cash").value = "0.00";
+            document.getElementById("balance").value = "0.00";
+            
+            // Set order type to Delivery if it came from PO List
+            document.getElementById("order-type").value = orderData.order_type || "Dine-In";
+            
+            console.log(`💰 Grand Total: ₱${total.toFixed(2)}`);
+            console.log(`🚚 Order Type: ${orderData.order_type}`);
+        }
+
+        // ============================================
+        // ORIGINAL CODE STARTS HERE
+        // ============================================
+
+        // Sidebar active link highlight
+        $(function(){
+            var path = window.location.pathname;
+            if (path.includes("po_list")) $("#link-po-list").addClass("active");
+            else if (path.includes("sales_chart")) $("#link-sales-report").addClass("active");
+            else if (path.includes("analytics_display")) $("#link-analytics").addClass("active");
+            else if (path.includes("bestsellers")) $("#link-bestsellers").addClass("active");
+            else if (path.includes("index")) $("#link-add-menu").addClass("active");
+            else if (path.includes("products")) $("#link-update-menu").addClass("active");
+            else if (path.includes("users")) $("#link-manage-users").addClass("active");
+            else if (path.includes("login")) $("#link-logout").addClass("active");
+        });
+
+        // Load categories from backend and display as cards
+        function loadCategories() {
+            $.ajax({
+                url: "../php/fetch_categories.php",
+                type: "GET",
+                dataType: "json",
+                success: function(categories) {
+                    let html = "";
+                    categories.forEach((cat, i) => {
+                        html += `<div class="category-card${i===0?' selected':''}" data-category="${cat.name}">
+                            ${cat.icon ? `<span style="font-size:19px;margin-right:4px;">${cat.icon}</span>` : ""}
+                            ${cat.name}
+                        </div>`;
+                    });
+                    $("#categories").html(html);
+                    // Load initial items for first category
+                    if(categories.length > 0) loadItems(categories[0].name);
+                }
+            });
+        }
+
+        // Load items from backend and display as cards
+        function loadItems(category) {
+            $.ajax({
+                url: "../php/fetch_items.php",
+                type: "GET",
+                data: {category: category},
+                dataType: "json",
+                success: function(items) {
+                    let html = "";
+                    items.forEach(item => {
+                        html += `<div class="item-card" data-name="${item.name}" data-price="${item.price}">
+                            <img src="${item.image ? item.image : 'https://placehold.co/60x60?text='+encodeURIComponent(item.name.charAt(0))}" class="item-img" alt="">
+                            <div class="item-name">${item.name}</div>
+                            <div class="item-price">₱${parseFloat(item.price).toFixed(2)}</div>
+                        </div>`;
+                    });
+                    $("#items").html(html);
+                }
+            });
+        }
+
+        // Init - LOAD BILLING ORDER FIRST
+        $(function(){
+            console.log('🚀 Initializing billing system...');
+            
+            // Load billing order from session if transferred from PO List
+            loadBillingOrderFromSession();
+            
+            loadCategories();
+            
+            // Category click loads items
+            $(document).on("click",".category-card",function(){
+                $(".category-card").removeClass("selected");
+                $(this).addClass("selected");
+                let cat = $(this).data("category");
+                loadItems(cat);
+            });
+        });
+
+        // Bill logic - add items
+        $(document).on("click", ".item-card", function() {
+            let name = $(this).data("name");
+            let price = parseFloat($(this).data("price"));
+            let found = false;
+            
+            $("#order-table tbody tr").each(function() {
+                let rowName = $(this).find("td:eq(0)").text();
+                if (rowName === name) {
+                    let qtyCell = $(this).find("td:eq(2)");
+                    let subtotalCell = $(this).find("td:eq(1)");
+                    let qty = parseInt(qtyCell.text()) + 1;
+                    qtyCell.text(qty);
+                    subtotalCell.text("₱" + (price * qty).toFixed(2));
+                    found = true;
+                    return false;
+                }
+            });
+            
+            if (!found) {
+                $("#order-table tbody").append(`
+                    <tr>
+                        <td>${name}</td>
+                        <td>₱${price.toFixed(2)}</td>
+                        <td>1</td>
+                        <td><button class="delete-btn">X</button></td>
+                    </tr>
+                `);
+            }
+            
+            // Recalculate total
+            let total = 0;
+            $("#order-table tbody tr").each(function() {
+                let rowSubtotal = parseFloat($(this).find("td:eq(1)").text().replace("₱", ""));
+                total += rowSubtotal;
+            });
+            $("#total").val(total.toFixed(2));
+            updateBalance();
+        });
+
+        $(document).on("click", ".delete-btn", function() {
+            let row = $(this).closest("tr");
+            let subtotal = parseFloat(row.find("td:eq(1)").text().replace("₱", ""));
+            let total = parseFloat($("#total").val()) || 0;
+            total -= subtotal;
+            $("#total").val(total.toFixed(2));
+            row.remove();
+            updateBalance();
+        });
+
+        $("#cash").on("input", function() {
+            let value = parseFloat($(this).val()) || 0;
+            $(this).val(value.toFixed(2));
+            updateBalance();
+        });
+        
+        $("#cash").on("focus", function() {
+            $(this).val("");
+        });
+
+        function updateBalance() {
+            let cash = parseFloat($("#cash").val()) || 0;
+            let total = parseFloat($("#total").val()) || 0;
+            let balance = cash - total;
+            $("#balance").val(balance.toFixed(2));
+            $("#balance").css("color", balance < 0 ? "red" : "black");
+        }
+
+        // Numpad mouse controls
+        $(".num-btn").click(function() {
+            let num = $(this).text();
+            let currentCash = $("#cash").val();
+            if(currentCash === "0.00") currentCash = "";
+            $("#cash").val(currentCash + num);
+            updateBalance();
+        });
+        
+        $("#clear").click(function() {
+            $("#cash").val("");
+            updateBalance();
+        });
+        
+        $("#enter").click(function() {
+            $("#checkout").trigger("click");
+        });
+
+        // Keyboard support
+        $(document).on("keydown", function(e) {
+            const cashInput = $("#cash");
+            if (!cashInput.is(":visible")) return;
+            
+            if (e.key >= "0" && e.key <= "9") {
+                let currentCash = cashInput.val();
+                if(currentCash === "0.00") currentCash = "";
+                cashInput.val(currentCash + e.key);
+                updateBalance();
+                e.preventDefault();
+            }
+            if (e.key === "Backspace") {
+                let currentCash = cashInput.val();
+                cashInput.val(currentCash.slice(0, -1));
+                updateBalance();
+                e.preventDefault();
+            }
+            if (e.key === "c" || e.key === "C") {
+                cashInput.val("");
+                updateBalance();
+                e.preventDefault();
+            }
+            if (e.key === "Enter") {
+                $("#checkout").trigger("click");
+                e.preventDefault();
+            }
+        });
+
+        // --- Checkout: Save to backend, then print receipt, then clear bill ---
+        $("#checkout").click(function () {
+            let total = parseFloat($("#total").val()) || 0;
+            let cash = parseFloat($("#cash").val()) || 0;
+            
+            if (total === 0) {
+                alert("❌ No items in the bill!");
+                return;
+            }
+            if (cash < total) {
+                alert("❌ Insufficient cash amount!");
+                return;
+            }
+            
+            let orderItems = [];
+            $("#order-table tbody tr").each(function () {
+                let name = $(this).find("td:eq(0)").text().trim();
+                let subtotal = parseFloat($(this).find("td:eq(1)").text().replace("₱", "").trim());
+                let qty = parseInt($(this).find("td:eq(2)").text().trim());
+                if (name && !isNaN(subtotal) && !isNaN(qty) && qty > 0) {
+                    let unitPrice = subtotal/qty;
+                    orderItems.push({ name: name, price: unitPrice, quantity: qty });
+                }
+            });
+            
+            if (orderItems.length === 0) {
+                alert("❌ No items detected in the bill!");
+                return;
+            }
+            
+            let orderData = {
+                items: orderItems,
+                total: total,
+                cash: cash,
+                order_type: $("#order-type").val()
+            };
+            
+            console.log('💾 Saving order:', orderData);
+            
+            // Save order to the backend
+            fetch("../php/save_sales.php", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(orderData)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Order saved with ID:', data.sale_id);
+                    alert("✅ Order saved successfully!");
+                    printReceipt(orderData);
+                    
+                    // CLEAR SESSION DATA AFTER SUCCESSFUL CHECKOUT
+                    clearBillingOrderFromSession();
+                    
+                    // Clear order
+                    $("#order-table tbody").html("");
+                    $("#total").val("0.00");
+                    $("#cash").val("0.00");
+                    $("#balance").val("0.00");
+                    $("#order-type").val("Dine-In");
+                    localStorage.removeItem("cart");
+                    
+                    console.log('🧹 Bill cleared');
+                } else {
+                    alert("❌ Error: " + data.error);
+                }
+            })
+            .catch(error => {
+                alert("❌ Failed to save order. Please try again.");
+                console.error('❌ Save error:', error);
+            });
+        });
+
+        // Receipt printing function
+        function printReceipt(orderData) {
+            let receiptHTML = `
+            <div id="receipt-print">
+                <div class="receipt-header">
+                    <h2 style="margin-bottom:2px;">TOWINSPOS</h2>
+                    <hr>
+                    <div style="font-size:12px;">
+                        <div>Date: ${new Date().toLocaleString()}</div>
+                        <div>Order Type: <strong>${orderData.order_type}</strong></div>
+                    </div>
+                    <hr>
+                </div>
+                <table class="receipt-table">
+                    <thead>
+                        <tr>
+                            <th style="text-align:left;">Item</th>
+                            <th>Qty</th>
+                            <th style="text-align:right;">Price</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            orderData.items.forEach(item => {
+                receiptHTML += `
+                    <tr>
+                        <td style="text-align:left;">${item.name}</td>
+                        <td style="text-align:center;">${item.quantity}</td>
+                        <td style="text-align:right;">₱${parseFloat(item.price).toFixed(2)}</td>
+                    </tr>
+                `;
+            });
+            receiptHTML += `
+                    </tbody>
+                </table>
+                <hr>
+                <div class="receipt-totals">
+                    <div><span>Total:</span><span>PHP ${orderData.total.toFixed(2)}</span></div>
+                    <div><span>Cash:</span><span>PHP ${orderData.cash.toFixed(2)}</span></div>
+                    <div><span>Change:</span><span>PHP ${(orderData.cash - orderData.total).toFixed(2)}</span></div>
+                </div>
+                <hr>
+                <div class="receipt-footer">
+                    <div style="text-align:center;font-size:11px;margin-top:8px;">
+                        Thank you for your purchase!<br>
+                        Powered by TOWINSPOS
+                    </div>
+                </div>
+            </div>
+            <style>
+            @page {
+                size: 58mm auto;
+                margin: 0;
+            }
+            @media print {
+                body * { visibility: hidden; }
+                #receipt-print, #receipt-print * { visibility: visible; }
+                #receipt-print {
+                    position: absolute;
+                    left: 0; top: 0;
+                    width: 58mm;
+                    min-width: 0 !important;
+                    font-family: monospace, Arial, sans-serif;
+                    font-size: 12px;
+                    background: #fff;
+                    color: #111;
+                    padding: 0;
+                }
+                .receipt-header h2 { font-size: 19px; margin: 0; }
+                .receipt-header small { font-size: 12px; }
+                .receipt-table { width: 100%; border-collapse: collapse;}
+                .receipt-table th, .receipt-table td { padding: 2px 0; }
+                .receipt-totals { font-size: 13px; margin-top:6px; }
+                .receipt-totals div { display: flex; justify-content: space-between; }
+                .receipt-footer { margin-top: 6px; }
+                hr { border:none; border-top:1px dashed #aaa; margin: 6px 0; }
+            }
+            #receipt-print {
+                width: 58mm;
+                min-width: 0 !important;
+                font-family: monospace, Arial, sans-serif;
+                font-size: 12px;
+                background: #fff;
+                color: #111;
+                padding: 0 2px;
+            }
+            .receipt-header h2 { font-size: 19px; margin: 0; }
+            .receipt-header small { font-size: 12px; }
+            .receipt-table { width: 100%; border-collapse: collapse;}
+            .receipt-table th, .receipt-table td { padding: 2px 0; }
+            .receipt-totals { font-size: 13px; margin-top:6px; }
+            .receipt-totals div { display: flex; justify-content: space-between; }
+            .receipt-footer { margin-top: 6px; }
+            hr { border:none; border-top:1px dashed #aaa; margin: 6px 0; }
+            </style>
+            `;
+
+            let printWindow = window.open("", "", "width=340,height=600");
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>Receipt</title>
+                    </head>
+                    <body>
+                        ${receiptHTML}
+                        <script>
+                            window.onload = function() {
+                                window.print();
+                            }
+                        <\/script>
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+        }
+    </script>
+</body>
+</html>

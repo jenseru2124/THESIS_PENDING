@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Seasonal Sales Analytics - Towin's Foodtrip</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/analytics_display.css">
+    
+</head>
+<body>
+    <div class="container">
+        <div class="logo-img">
+            <!-- Replace with your actual logo path -->
+            <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo" />
+        </div>
+        <button class="back-btn" onclick="window.location.href='/html/billing.html'">← Back</button>
+        <h1>Seasonal Sales</h1>
+        <form id="analyticsForm">
+            <label for="season">Select a Season:</label>
+            <select id="season" name="season" required>
+                <option value="Summer">Summer (January-May)</option>
+                <option value="Rainy">Rainy (June-August)</option>
+                <option value="BER">BER Months (September-December)</option>
+            </select>
+            <label for="year">Year:</label>
+            <select id="year" name="year" required></select>
+            <button type="submit">View Analytics</button>
+        </form>
+        <div id="selectedSeasonText">Please select a season and year to view analytics.</div>
+        <!-- Main analytics results -->
+        <div id="results"></div>
+        <!-- Grand Total -->
+        <div id="grandTotalContainer" style="display:none;"></div>
+        <!-- Best Seller Table -->
+        <div id="bestSellerTableContainer">
+            <h2>Top Seller in Each Category</h2>
+            <select id="bestSellerTableFilter">
+                <option value="ALL">All Categories</option>
+            </select>
+            <table id="bestSellerTable">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Item Name</th>
+                        <th>Total Quantity</th>
+                        <th>Total Revenue (PHP)</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+    <script>
+        // Populate the year dropdown dynamically (2025, 2024, 2023)
+        (function populateYearDropdown() {
+            const yearSelect = document.getElementById('year');
+            const maxYear = 2025;
+            const minYear = 2023;
+            for (let y = maxYear; y >= minYear; y--) {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.text = y;
+                yearSelect.appendChild(opt);
+            }
+        })();
+
+        let bestSellerDataGlobal = [];
+
+        document.getElementById('analyticsForm').addEventListener('submit', function (e) {
+            e.preventDefault();
+
+            // Get form values
+            const season = document.getElementById('season').value;
+            const year = document.getElementById('year').value;
+
+            document.getElementById('selectedSeasonText').textContent = `You selected: ${season} - ${year}`;
+
+            // Fetch analytics data (main table)
+            fetch('/php/display_analytics.php?season=' + encodeURIComponent(season) + '&year=' + encodeURIComponent(year))
+                .then(response => response.json())
+                .then(data => {
+                    const resultsDiv = document.getElementById('results');
+                    resultsDiv.innerHTML = '';
+                    let grandTotal = 0;
+                    if (data.length > 0) {
+                        const table = document.createElement('table');
+                        const headerRow = document.createElement('tr');
+                        headerRow.innerHTML = `
+                            <th>Item Name</th>
+                            <th>Total Quantity</th>
+                            <th>Total Revenue (PHP)</th>
+                        `;
+                        table.appendChild(headerRow);
+
+                        data.forEach(row => {
+                            const dataRow = document.createElement('tr');
+                            dataRow.innerHTML = `
+                                <td>${row.item_name}</td>
+                                <td>${row.total_quantity}</td>
+                                <td>₱${parseFloat(row.total_revenue).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                            `;
+                            table.appendChild(dataRow);
+                            grandTotal += parseFloat(row.total_revenue);
+                        });
+
+                        resultsDiv.appendChild(table);
+
+                        // Show grand total
+                        document.getElementById('grandTotalContainer').style.display = '';
+                        document.getElementById('grandTotalContainer').innerHTML = 
+                            `Grand Total Sales for ${season} ${year}: <span style="color:#388e3c;">₱${grandTotal.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</span>`;
+                    } else {
+                        resultsDiv.innerHTML = '<p>No data available for the selected season and year.</p>';
+                        document.getElementById('grandTotalContainer').style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching analytics data:', error);
+                    document.getElementById('results').innerHTML = '<p>An error occurred while fetching data.</p>';
+                    document.getElementById('grandTotalContainer').style.display = 'none';
+                });
+
+            // Fetch best sellers per category (table)
+            fetch('/php/bestsellers.php?season=' + encodeURIComponent(season) + '&year=' + encodeURIComponent(year))
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('bestSellerTableContainer');
+                    const tbody = document.querySelector('#bestSellerTable tbody');
+                    const filter = document.getElementById('bestSellerTableFilter');
+                    bestSellerDataGlobal = data;
+                    tbody.innerHTML = '';
+                    filter.innerHTML = '<option value="ALL">All Categories</option>'; // Reset filter
+
+                    if (data.length > 0) {
+                        // Populate filter dropdown with categories
+                        const cats = [...new Set(data.map(row => row.category))];
+                        cats.forEach(cat => {
+                            const opt = document.createElement('option');
+                            opt.value = cat;
+                            opt.text = cat;
+                            filter.appendChild(opt);
+                        });
+
+                        container.style.display = '';
+                        renderBestSellerTable('ALL');
+                    } else {
+                        container.style.display = 'none';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching top seller per category:', error);
+                    document.getElementById('bestSellerTableContainer').style.display = 'none';
+                });
+        });
+
+        // Filter handler
+        document.getElementById('bestSellerTableFilter').addEventListener('change', function () {
+            renderBestSellerTable(this.value);
+        });
+
+        function renderBestSellerTable(category) {
+            const tbody = document.querySelector('#bestSellerTable tbody');
+            tbody.innerHTML = '';
+            let dataToShow = bestSellerDataGlobal;
+            if (category && category !== "ALL") {
+                dataToShow = bestSellerDataGlobal.filter(row => row.category === category);
+            }
+            dataToShow.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.category}</td>
+                    <td>${row.item_name}</td>
+                    <td>${row.total_quantity}</td>
+                    <td>₱${parseFloat(row.total_revenue).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    </script>
+</body>
+</html>

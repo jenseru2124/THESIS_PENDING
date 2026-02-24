@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sales Charts - Towin's Foodtrip</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Poppins:400,700|Montserrat:400,700|Inter:400,700|Roboto:400,700" rel="stylesheet">
+   <link rel="stylesheet" href="/css/sales_chart.css">
+</head>
+<body>
+    <div class="container">
+        <div class="logo-img">
+            <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo" />
+        </div>
+        <div class="nav-buttons">
+            <button onclick="window.location.href='/html/billing.html'">← Back</button>
+        </div>
+        <h2>Sales Dashboard</h2>
+        <div class="filters">
+            <label for="filter_type">Filter by:</label>
+            <select id="filter_type">
+                <option value="day">Day</option>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+                <option value="year">Year</option>
+            </select>
+            <span id="filter_selects"></span>
+        </div>
+
+        <div id="loading" class="loading-message">Loading data...</div>
+        <div class="chart-container" style="display:none" id="totalSalesDiv">
+            <h3>Total Sales</h3>
+            <canvas id="totalSalesChart"></canvas>
+            <div id="no-sales-data" class="no-data-message" style="display:none">No sales data available.</div>
+        </div>
+        <div class="chart-container" style="display:none" id="itemSalesDiv">
+            <h3>Sales by Item</h3>
+            <canvas id="itemSalesChart"></canvas>
+            <div id="no-item-data" class="no-data-message" style="display:none">No item sales data available.</div>
+        </div>
+    </div>
+    <script>
+    // Utility functions
+    const fixedYears = ['2023', '2024', '2025'];
+
+    function getMonth(dateStr) { return dateStr.slice(0, 7); }
+    function getYear(dateStr) { return dateStr.slice(0, 4); }
+    function getWeek(dateStr) {
+        // Returns year-W## (ISO week format)
+        const d = new Date(dateStr);
+        const dayNum = d.getUTCDay() || 7;
+        d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+        const weekNum = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+        return `${d.getUTCFullYear()}-W${weekNum.toString().padStart(2,'0')}`;
+    }
+
+    // Data holders
+    let salesSummary = [];
+    let itemSummary = [];
+    let allItems = [];
+
+    // Chart objects
+    let totalSalesChart;
+    let itemSalesChart;
+
+    // Initial loading flag
+    let dataLoaded = false;
+
+    function showLoading(show) {
+        document.getElementById('loading').style.display = show ? '' : 'none';
+        document.getElementById('totalSalesDiv').style.display = show ? 'none' : '';
+        document.getElementById('itemSalesDiv').style.display = show ? 'none' : '';
+    }
+
+    // Fetch data and initialize
+    showLoading(true);
+    fetch('/php/get_sales_data.php')
+        .then(res => res.json())
+        .then(data => {
+            salesSummary = data.sales_summary;
+            itemSummary = data.item_summary;
+            allItems = [...new Set(itemSummary.map(i => i.item_name))];
+            showLoading(false);
+            setupFilters();
+            updateCharts();
+        })
+        .catch(err => {
+            showLoading(false);
+            document.getElementById('loading').textContent = 'Failed to load data.';
+        });
+
+    // Filter UI
+    function setupFilters() {
+        const filterType = document.getElementById('filter_type').value;
+        const filterSelects = document.getElementById('filter_selects');
+        filterSelects.innerHTML = '';
+
+        // Get all years from data and fixedYears, then deduplicate and sort
+        const yearsFromData = salesSummary.map(s => getYear(s.sale_date));
+        const years = Array.from(new Set([...fixedYears, ...yearsFromData])).sort();
+
+        if (filterType === 'month' || filterType === 'week' || filterType === 'day') {
+            // Year select
+            const yearSel = document.createElement('select');
+            yearSel.id = 'year_select';
+            years.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y; opt.textContent = y;
+                yearSel.appendChild(opt);
+            });
+            // Set the current year if available, otherwise the last year in the list
+            const currentYear = new Date().getFullYear().toString();
+            yearSel.value = years.includes(currentYear) ? currentYear : years[years.length - 1];
+            yearSel.addEventListener('change', () => {
+                if (filterType === 'day') setupMonthSelect();
+                if (filterType === 'week') setupWeekSelect();
+                updateCharts();
+            });
+            filterSelects.appendChild(document.createTextNode(' Year: '));
+            filterSelects.appendChild(yearSel);
+
+            if (filterType === 'day') setupMonthSelect();
+            if (filterType === 'week') setupWeekSelect();
+        }
+        document.getElementById('filter_type').addEventListener('change', () => {
+            setupFilters();
+            updateCharts();
+        });
+    }
+
+    function setupMonthSelect() {
+        const filterSelects = document.getElementById('filter_selects');
+        const year = document.getElementById('year_select').value;
+        const months = [...new Set(salesSummary.filter(s => getYear(s.sale_date) === year).map(s => getMonth(s.sale_date)))];
+        let monthSel = document.getElementById('month_select');
+        if (!monthSel) {
+            monthSel = document.createElement('select');
+            monthSel.id = 'month_select';
+            filterSelects.appendChild(document.createTextNode(' Month: '));
+            filterSelects.appendChild(monthSel);
+        }
+        monthSel.innerHTML = '';
+        months.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m; opt.textContent = m;
+            monthSel.appendChild(opt);
+        });
+        monthSel.addEventListener('change', updateCharts);
+    }
+
+    function setupWeekSelect() {
+        const filterSelects = document.getElementById('filter_selects');
+        const year = document.getElementById('year_select').value;
+        // All unique weeks for the selected year
+        const weeks = Array.from(new Set(
+            salesSummary.filter(s => getYear(s.sale_date) === year).map(s => getWeek(s.sale_date))
+        )).sort();
+        let weekSel = document.getElementById('week_select');
+        if (!weekSel) {
+            weekSel = document.createElement('select');
+            weekSel.id = 'week_select';
+            filterSelects.appendChild(document.createTextNode(' Week: '));
+            filterSelects.appendChild(weekSel);
+        }
+        weekSel.innerHTML = '';
+        // Add "All" option
+        const allOpt = document.createElement('option');
+        allOpt.value = 'all';
+        allOpt.textContent = 'All';
+        weekSel.appendChild(allOpt);
+        weeks.forEach(w => {
+            const opt = document.createElement('option');
+            opt.value = w; opt.textContent = w;
+            weekSel.appendChild(opt);
+        });
+        weekSel.addEventListener('change', updateCharts);
+    }
+
+    function updateCharts() {
+        // Hide no data messages
+        document.getElementById('no-sales-data').style.display = 'none';
+        document.getElementById('no-item-data').style.display = 'none';
+
+        const filterType = document.getElementById('filter_type').value;
+        let filteredSales = [];
+        let filteredItems = [];
+        if (filterType === 'year') {
+            // Group by year
+            let salesByYear = {};
+            salesSummary.forEach(s => {
+                const yr = getYear(s.sale_date);
+                salesByYear[yr] = (salesByYear[yr] || 0) + s.total_sales;
+            });
+            filteredSales = Object.entries(salesByYear).map(([label, value]) => ({label, value}));
+            // Items by year
+            let itemsByYear = {};
+            itemSummary.forEach(i => {
+                const yr = getYear(i.sale_date);
+                if (!itemsByYear[yr]) itemsByYear[yr] = {};
+                itemsByYear[yr][i.item_name] = (itemsByYear[yr][i.item_name] || 0) + i.total_revenue;
+            });
+            filteredItems = itemsByYear;
+        } else if (filterType === 'month') {
+            const year = document.getElementById('year_select').value;
+            let salesByMonth = {};
+            salesSummary.filter(s => getYear(s.sale_date) === year)
+                .forEach(s => {
+                    const mo = getMonth(s.sale_date);
+                    salesByMonth[mo] = (salesByMonth[mo] || 0) + s.total_sales;
+                });
+            filteredSales = Object.entries(salesByMonth).map(([label, value]) => ({label, value}));
+            // Items by month
+            let itemsByMonth = {};
+            itemSummary.filter(i => getYear(i.sale_date) === year)
+                .forEach(i => {
+                    const mo = getMonth(i.sale_date);
+                    if (!itemsByMonth[mo]) itemsByMonth[mo] = {};
+                    itemsByMonth[mo][i.item_name] = (itemsByMonth[mo][i.item_name] || 0) + i.total_revenue;
+                });
+            filteredItems = itemsByMonth;
+        } else if (filterType === 'week') {
+            const year = document.getElementById('year_select').value;
+            const weekSel = document.getElementById('week_select');
+            if (!weekSel) return;
+            const week = weekSel.value;
+            // Group by week in that year
+            let salesByWeek = {};
+            salesSummary.filter(s => getYear(s.sale_date) === year)
+                .forEach(s => {
+                    const wk = getWeek(s.sale_date);
+                    salesByWeek[wk] = (salesByWeek[wk] || 0) + s.total_sales;
+                });
+            filteredSales = Object.entries(salesByWeek).map(([label, value]) => ({label, value}));
+            // Items by week
+            let itemsByWeek = {};
+            itemSummary.filter(i => getYear(i.sale_date) === year)
+                .forEach(i => {
+                    const wk = getWeek(i.sale_date);
+                    if (!itemsByWeek[wk]) itemsByWeek[wk] = {};
+                    itemsByWeek[wk][i.item_name] = (itemsByWeek[wk][i.item_name] || 0) + i.total_revenue;
+                });
+            filteredItems = itemsByWeek;
+            // If "all" is selected, show all weeks for the selected year
+            if (week && week !== 'all') {
+                filteredSales = [{label: week, value: salesByWeek[week] || 0}];
+                filteredItems = {[week]: itemsByWeek[week] || {}};
+            }
+            // else, leave filteredSales and filteredItems as all weeks
+        } else if (filterType === 'day') {
+            const year = document.getElementById('year_select').value;
+            const month = document.getElementById('month_select').value;
+            let salesByDay = {};
+            salesSummary.filter(s => getMonth(s.sale_date) === month && getYear(s.sale_date) === year)
+                .forEach(s => {
+                    salesByDay[s.sale_date] = (salesByDay[s.sale_date] || 0) + s.total_sales;
+                });
+            filteredSales = Object.entries(salesByDay).map(([label, value]) => ({label, value}));
+            // Items by day
+            let itemsByDay = {};
+            itemSummary.filter(i => getMonth(i.sale_date) === month && getYear(i.sale_date) === year)
+                .forEach(i => {
+                    if (!itemsByDay[i.sale_date]) itemsByDay[i.sale_date] = {};
+                    itemsByDay[i.sale_date][i.item_name] = (itemsByDay[i.sale_date][i.item_name] || 0) + i.total_revenue;
+                });
+            filteredItems = itemsByDay;
+        }
+
+        // Check if there is data to display
+        const showSales = filteredSales && filteredSales.length > 0 && filteredSales.some(d => d.value > 0);
+        const showItems = filteredItems && Object.keys(filteredItems).length > 0 && Object.values(filteredItems).some(obj => Object.values(obj).some(v => v > 0));
+        document.getElementById('totalSalesDiv').style.display = showSales ? '' : '';
+        document.getElementById('itemSalesDiv').style.display = showItems ? '' : '';
+
+        if (!showSales) {
+            document.getElementById('no-sales-data').style.display = '';
+        }
+        if (!showItems) {
+            document.getElementById('no-item-data').style.display = '';
+        }
+
+        drawTotalSalesChart(filteredSales, filterType);
+        drawItemSalesChart(filteredItems, filterType);
+    }
+
+    function drawTotalSalesChart(data, labelType) {
+        const ctx = document.getElementById('totalSalesChart').getContext('2d');
+        if (totalSalesChart) totalSalesChart.destroy();
+        totalSalesChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.map(d => d.label),
+                datasets: [{
+                    label: 'Total Sales',
+                    data: data.map(d => d.value),
+                    backgroundColor: 'rgba(25, 118, 210, 0.8)'
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true } },
+                plugins: { legend: { display: false } }
+            }
+        });
+    }
+
+    function drawItemSalesChart(groupedData, labelType) {
+        const ctx = document.getElementById('itemSalesChart').getContext('2d');
+        if (itemSalesChart) itemSalesChart.destroy();
+
+        const labels = Object.keys(groupedData).sort();
+        let items = new Set();
+        labels.forEach(label => {
+            Object.keys(groupedData[label]).forEach(item => items.add(item));
+        });
+        items = Array.from(items).sort();
+
+        const colors = [
+            '#e57373', '#ba68c8', '#64b5f6', '#43a047', '#ffd54f',
+            '#ffb74d', '#a1887f', '#90a4ae', '#f06292', '#7986cb', '#aed581'
+        ];
+        const datasets = items.map((item, idx) => ({
+            label: item,
+            data: labels.map(lab => groupedData[lab][item] || 0),
+            backgroundColor: colors[idx % colors.length],
+            borderRadius: 6,
+            maxBarThickness: 28
+        }));
+
+        itemSalesChart = new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: {
+                plugins: { legend: { display: true } },
+                responsive: true,
+                scales: { y: { beginAtZero: true } }
+            }
+        });
+    }
+    </script>
+</body>
+</html>

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Towin's Foodtrip - Logout</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/logout.css">
+
+</head>
+<body>
+    <div class="logout-wrapper">
+        <div class="logout-container">
+            <!-- Logout Loading State -->
+            <div id="loadingState">
+                <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo" class="logout-logo">
+                <div class="logout-icon">👋</div>
+                <h1>See you soon!</h1>
+                <p class="subtitle">You are being logged out safely from your account</p>
+
+                <div class="loading-spinner"></div>
+                <p class="status-text">Signing you out...</p>
+
+                <div class="logout-message">
+                    <strong>🔒 Account Security</strong>
+                    For your security, we're clearing your session data and logging you out of all active sessions.
+                </div>
+            </div>
+
+            <!-- Success State -->
+            <div id="successState" class="success-state">
+                <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo" class="logout-logo">
+                <div class="success-icon">✅</div>
+                <div class="success-title">Successfully Logged Out</div>
+                <p class="success-subtitle">You have been safely logged out of your account</p>
+
+                <div class="redirect-info">
+                    <strong>⏱️ Redirecting in 3 seconds...</strong>
+                    You will be redirected to the login page. If not, <a href="/html/index.html" style="color: #155724; font-weight: 600;">click here</a>.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Logout function
+        function performLogout() {
+            fetch('/php/logout.php', {
+                method: 'GET',
+                credentials: 'same-origin'
+            }).then(response => {
+                // Clear any local/session storage
+                if (typeof(Storage) !== "undefined") {
+                    localStorage.clear();
+                    sessionStorage.clear();
+                }
+
+                // Show success state
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('successState').classList.add('show');
+
+                // Redirect after 3 seconds
+                setTimeout(() => {
+                    window.location.href = '/html/index.html';
+                }, 3000);
+            }).catch(error => {
+                console.error('Logout error:', error);
+                // Still redirect even if error occurs
+                setTimeout(() => {
+                    window.location.href = '/html/index.html';
+                }, 2000);
+            });
+        }
+
+        // Run logout when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            performLogout();
+        });
+
+        // Also run if DOM is already loaded
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', performLogout);
+        } else {
+            performLogout();
+        }
+    </script>
+</body>
+</html>

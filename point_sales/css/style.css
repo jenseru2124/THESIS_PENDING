@@ -1,0 +1,416 @@
+html, body {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Inter', 'Roboto', Arial, sans-serif;
+    background: linear-gradient(135deg, #e0eafc 0%, #cfdef3 100%);
+    min-height: 100vh;
+    color: #1b263b;
+}
+
+/* ==== Sidebar ==== */
+.sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 190px;
+    height: 100vh;
+    background: #1a2233;
+    color: #fff;
+    padding-top: 30px;
+    z-index: 100;
+    box-shadow: 2px 0 18px rgba(0,0,0,0.12);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+}
+.sidebar .side-menu-link {
+    display: block;
+    color: #e0eafc;
+    text-decoration: none;
+    padding: 16px 22px;
+    font-size: 17px;
+    border-bottom: 1px solid #24304a;
+    transition: background 0.18s, color 0.18s;
+    background: none;
+    letter-spacing: 0.02em;
+}
+.sidebar .side-menu-link:hover,
+.sidebar .side-menu-link.active {
+    background: linear-gradient(90deg, #233554 50%, #1a2233 100%);
+    color: #ffd166;
+    font-weight: bold;
+}
+.sidebar .side-menu-link.active { border-left: 4px solid #ffd166; padding-left: 18px; }
+
+/* ==== Main Layout ==== */
+.main-flex {
+    margin-left: 190px;
+    display: flex;
+    height: 100vh;
+    box-sizing: border-box;
+    overflow: hidden;
+    background: transparent;
+}
+.left-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    padding: 36px 24px 30px 24px;
+    min-width: 0;
+    background: transparent;
+    gap: 28px;
+}
+
+/* ==== Categories: Modern Pill Buttons ==== */
+.categories-scroll {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px 22px;
+    background: #ffffffcc;
+    padding: 20px 20px 12px 20px;
+    border-radius: 18px;
+    margin-bottom: 0;
+    box-shadow: 0 4px 24px rgba(0,123,255,0.07);
+    backdrop-filter: blur(2px);
+    justify-content: flex-start;
+}
+.category-card {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 120px;
+    height: 44px;
+    padding: 0 28px;
+    background: #f8fafc;
+    color: #1976d2;
+    font-weight: 600;
+    font-size: 1.07rem;
+    border-radius: 999px;
+    border: 2.5px solid #e3eaf5;
+    cursor: pointer;
+    transition:
+        background 0.14s,
+        color 0.14s,
+        border-color 0.14s,
+        box-shadow 0.13s,
+        transform 0.12s;
+    box-shadow: 0 1px 8px rgba(100,150,255,0.04);
+    user-select: none;
+    white-space: nowrap;
+    outline: none;
+    margin: 0;
+    letter-spacing: 0.01em;
+}
+.category-card span {
+    font-size: 1.25em;
+    margin-right: 7px;
+    display: inline-block;
+    vertical-align: middle;
+}
+.category-card.selected,
+.category-card:active {
+    background: linear-gradient(90deg, #1976d2 65%, #70c1ff 100%);
+    color: #fff;
+    border-color: #2196f3;
+    box-shadow: 0 6px 22px rgba(33,150,243,0.12);
+    transform: scale(1.06);
+    z-index: 2;
+}
+.category-card:hover:not(.selected) {
+    background: #e3f2fd;
+    color: #1976d2;
+    border-color: #90caf9;
+    box-shadow: 0 2px 10px rgba(13,110,253,0.07);
+    transform: scale(1.03);
+}
+
+/* ==== Items Grid Modernized ==== */
+.items-grid {
+    flex: 1 1 0%;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 26px 24px;
+    background: #ffffffd9;
+    border-radius: 15px;
+    overflow-y: auto;
+    padding: 30px 18px 22px 18px;
+    min-height: 0;
+    box-shadow: 0 6px 32px rgba(80,150,255,0.07);
+    backdrop-filter: blur(2px);
+}
+.item-card {
+    background: linear-gradient(135deg, #f1f7ff 60%, #e0f7fa 100%);
+    border-radius: 16px;
+    box-shadow: 0 3px 18px rgba(25, 118, 210, 0.06);
+    text-align: center;
+    padding: 32px 10px 22px 10px;
+    cursor: pointer;
+    font-size: 19px;
+    min-height: 158px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: 
+        background 0.16s, 
+        box-shadow 0.16s, 
+        transform 0.11s,
+        border 0.12s;
+    user-select: none;
+    border: 2px solid transparent;
+    position: relative;
+    gap: 4px;
+}
+.item-card:hover {
+    background: linear-gradient(120deg, #e3f2fd 60%, #b5e2fa 100%);
+    box-shadow: 0 10px 28px rgba(33,150,243,0.14);
+    border: 2.5px solid #2196f3;
+    transform: translateY(-6px) scale(1.035);
+    z-index: 2;
+}
+.item-card .item-img {
+    width: 74px;
+    height: 74px;
+    object-fit: cover;
+    margin-bottom: 13px;
+    border-radius: 12px;
+    background: #f0f0f0;
+    box-shadow: 0 1px 8px rgba(25, 118, 210, 0.07);
+    border: 1.5px solid #e3eaf3;
+}
+.item-card .item-name {
+    font-weight: 700;
+    margin-top: 2px;
+    font-size: 1.13em;
+    color: #263859;
+    letter-spacing: 0.01em;
+}
+.item-card .item-price {
+    color: #219150;
+    font-weight: bold;
+    font-size: 1.06em;
+    margin-top: 7px;
+    letter-spacing: 0.01em;
+}
+
+/* ==== Bill Panel Modern ==== */
+.bill-panel {
+    width: 370px;
+    background: #fff;
+    border-left: 2px solid #d4e1f8;
+    display: flex;
+    flex-direction: column;
+    padding: 32px 20px 16px 20px;
+    box-shadow: -5px 0 24px rgba(33, 150, 243, 0.09);
+    position: relative;
+    z-index: 2;
+    min-width: 310px;
+    border-radius: 0 18px 18px 0;
+    gap: 12px;
+}
+.bill-panel h3 {
+    margin-top: 0;
+    margin-bottom: 18px;
+    color: #1565c0;
+    font-size: 1.28em;
+    letter-spacing: 0.01em;
+    font-weight: 700;
+}
+.bill-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0 6px;
+    margin-bottom: 18px;
+    font-size: 15.5px;
+    border-radius: 12px;
+    overflow: hidden;
+}
+.bill-table th, .bill-table td {
+    padding: 9px 6px;
+    text-align: center;
+}
+.bill-table th {
+    background: #e3f2fd;
+    color: #1976d2;
+    font-weight: bold;
+    letter-spacing: 0.02em;
+    border-radius: 8px 8px 0 0;
+}
+.bill-table tr {
+    background: #f8fafc;
+    border-radius: 7px;
+}
+.bill-table .delete-btn {
+    background: #ff5252;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 15px;
+    width: 24px; height: 24px;
+    transition: background 0.13s;
+}
+.bill-table .delete-btn:hover {
+    background: #d32f2f;
+}
+
+/* -- Bill Summary Modernized -- */
+.bill-summary {
+    margin-bottom: 18px;
+    font-size: 17px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+    width: 100%;
+}
+.bill-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+}
+.bill-row label {
+    color: #1565c0;
+    font-weight: 600;
+    flex: 1;
+    min-width: 80px;
+    text-align: left;
+}
+.bill-row input {
+    width: 110px;
+    text-align: right;
+    font-size: 1.07em;
+    padding: 7px 10px;
+    border: 1px solid #b8d2f5;
+    border-radius: 6px;
+    background: #f2faff;
+    font-weight: 600;
+    margin-left: 12px;
+}
+#balance[readonly] {
+    background: #eef6fb;
+}
+
+/* Beautify the dropdown */
+#order-type {
+    width: 100%;
+    padding: 10px 16px;
+    border: 1.5px solid #b8d2f5;
+    border-radius: 8px;
+    background: #f8fafc;
+    color: #1976d2;
+    font-size: 1.04em;
+    font-weight: 600;
+    margin-bottom: 12px;
+    margin-top: 2px;
+    transition: border 0.15s, background 0.15s;
+    outline: none;
+    box-shadow: 0 1px 7px rgba(33,150,243,0.06);
+}
+#order-type:focus {
+    border: 2px solid #2196f3;
+    background: #e3f2fd;
+}
+
+#checkout {
+    padding: 13px 0;
+    background: linear-gradient(90deg, #2196f3 75%, #1de9b6 100%);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.11em;
+    cursor: pointer;
+    font-weight: bold;
+    margin-top: 10px;
+    letter-spacing: 0.045em;
+    box-shadow: 0 2px 14px rgba(33, 150, 243, 0.08);
+    transition: background 0.18s, box-shadow 0.12s, transform 0.11s;
+}
+#checkout:hover, #checkout:active {
+    background: linear-gradient(90deg, #1565c0 80%, #1de9b6 100%);
+    box-shadow: 0 8px 20px rgba(33, 150, 243, 0.15);
+    transform: scale(1.03);
+}
+.numpad {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 7px;
+    margin-bottom: 12px;
+    justify-content: center;
+}
+.numpad button {
+    width: 64px;
+    height: 44px;
+    font-size: 18px;
+    background: #f1f6fc;
+    border: 1.5px solid #b8d2f5;
+    border-radius: 7px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background 0.14s, border 0.13s, color 0.13s;
+    color: #1976d2;
+}
+.numpad button:hover {
+    background: #e3f2fd;
+    border-color: #2196f3;
+    color: #0b3050;
+}
+.numpad button#clear, .numpad button#enter {
+    background: #2196f3;
+    color: #fff;
+    border: none;
+}
+.numpad button#clear:hover, .numpad button#enter:hover {
+    background: #1565c0;
+}
+
+/* ==== Responsive Modern === */
+@media (max-width: 1200px) {
+    .main-flex { flex-direction: column; margin-left: 0; }
+    .bill-panel {
+        width: 100vw;
+        position: fixed;
+        left: 0; right: 0; bottom: 0;
+        border-left: none;
+        border-top: 2px solid #d4e1f8;
+        box-shadow: 0 -2px 24px rgba(33, 150, 243, 0.13);
+        padding: 17px 4vw 11px 4vw;
+        z-index: 20;
+        min-width: 0;
+        border-radius: 18px 18px 0 0;
+        gap: 10px;
+    }
+    .left-panel { min-height: 280px; padding-bottom: 220px; }
+    .sidebar { display: none; }
+    .items-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 13px 12px; padding: 16px 3vw 10px 3vw; }
+}
+@media (max-width: 700px) {
+    .categories-scroll {
+        gap: 6px 7px;
+        padding: 8px 2px 5px 2px;
+        border-radius: 10px;
+        margin-bottom: 0;
+    }
+    .category-card {
+        min-width: 68px;
+        height: 34px;
+        font-size: 0.97em;
+        padding: 0 9px;
+    }
+    .items-grid { grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); padding: 6px 1vw 3px 1vw; }
+    .item-card { font-size: 14px; min-height: 75px; padding: 8px 2px 6px 2px; }
+    .item-card .item-img { width: 40px; height: 40px; margin-bottom: 5px; border-radius: 6px; }
+    .bill-summary label { font-size: 0.96em; }
+    #total, #cash, #balance { font-size: 0.95em; width: 52px; }
+    .bill-table th, .bill-table td { font-size: 0.97em; padding: 2px 2px; }
+    .numpad button { width: 34px; height: 28px; font-size: 0.95em; }
+    .bill-panel { padding: 7px 2vw 7px 2vw; }
+    .left-panel { padding: 8px 2vw 90px 2vw; gap: 12px;}
+}
+@media (max-width: 500px) {
+    .bill-panel { min-width: 0; padding: 6px 0.5vw 4px 0.5vw; }
+    .left-panel { padding: 6px 0.5vw 70px 0.5vw; }
+}

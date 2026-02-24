@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Profile | Towin's Foodtrip</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&family=Montserrat:wght@700&display=swap" rel="stylesheet">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="/css/profile.css">
+</head>
+<body>
+    <div class="main-layout">
+        <!-- SIDEBAR NAVIGATION -->
+        <nav class="sidebar">
+            <div class="sidebar-logo">
+                <img src="towins_logo.jpg" alt="Towin's Foodtrip logo">
+            </div>
+            
+            <div class="logo-section">
+                <div class="logo-title">Towin's</div>
+                <div class="sidebar-desc">FOODTRIP<br>PORK SISIG • GOTO PARES</div>
+            </div>
+
+            <div class="sidebar-nav">
+                <a href="online_ordering.html">🛍️ Online Order</a>
+                <a href="profile.html" class="active">👤 My Profile</a>
+                <a href="my_orders.html">📦 My Orders</a>
+            </div>
+
+            <a href="/php/logout.php" class="logout-btn">🚪 Logout</a>
+        </nav>
+
+        <!-- CONTENT AREA -->
+        <div class="content-area">
+            <div class="profile-card" id="profile-card">
+                <form class="profile-form" id="profile-form" enctype="multipart/form-data">
+                    <img src="avatar/default_avatar.png" alt="Profile Picture" class="profile-pic" id="profile-pic">
+                    
+                    <div class="avatar-actions" id="avatar-actions"></div>
+                    
+                    <hr>
+                    
+                    <div class="profile-name" id="profile-name"></div>
+                    <div class="profile-username" id="profile-username"></div>
+                    <div class="profile-role" id="profile-role"></div>
+                    
+                    <table class="profile-info-table">
+                        <tr>
+                            <td class="label">Email:</td>
+                            <td><input type="email" name="email" id="profile-email" readonly required></td>
+                        </tr>
+                        <tr>
+                            <td class="label">Name:</td>
+                            <td><input type="text" name="name" id="profile-fullname" readonly required></td>
+                        </tr>
+                        <tr>
+                            <td class="label">Address:</td>
+                            <td><input type="text" name="address" id="profile-address" readonly></td>
+                        </tr>
+                        <tr>
+                            <td class="label">Phone:</td>
+                            <td><input type="text" name="cellphone_number" id="profile-cell" readonly></td>
+                        </tr>
+                        <tr>
+                            <td class="label">Avatar:</td>
+                            <td>
+                                <input type="file" name="avatar" id="profile-avatar" accept="image/*">
+                                <label for="profile-avatar" id="change-avatar-label" style="cursor:pointer;color:#b23b21;text-decoration:underline;margin:0;">Change Avatar</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="label">Created:</td>
+                            <td id="profile-created"></td>
+                        </tr>
+                        <tr>
+                            <td class="label">Updated:</td>
+                            <td id="profile-updated"></td>
+                        </tr>
+                    </table>
+
+                    <div id="profile-msg"></div>
+
+                    <div class="profile-actions">
+                        <button type="button" class="edit-btn" id="edit-profile-btn">✏️ Edit</button>
+                        <button type="submit" class="save-btn" id="save-profile-btn" style="display:none;">💾 Save</button>
+                        <button type="button" class="cancel-btn" id="cancel-profile-btn" style="display:none;">❌ Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let userData = {};
+
+        function loadProfile() {
+            $.getJSON('/php/profile_api.php?action=get', function(data) {
+                if (data.error) {
+                    $("#profile-card .profile-name").text("Not logged in");
+                    $("#profile-msg").html('<span class="msg-error">You are not logged in. <a href="index.html" style="color:#b23b21;font-weight:600;">Login here</a></span>');
+                    $(".profile-username, .profile-role, .profile-info-table, .edit-btn").hide();
+                    $("#profile-pic").attr('src', 'avatar/default_avatar.png');
+                    return;
+                }
+                userData = data;
+                $('#profile-pic').attr('src', data.avatar || 'avatar/default_avatar.png');
+                $('#profile-name').text(data.name || 'No Name');
+                $('#profile-fullname').val(data.name || '');
+                $('#profile-username').text('@' + (data.username || 'username'));
+                $('#profile-role').text((data.role || 'user').toUpperCase());
+                $('#profile-email').val(data.email || '');
+                $('#profile-address').val(data.address || '');
+                $('#profile-cell').val(data.cellphone_number || '');
+                $('#profile-created').text(data.created_at ? new Date(data.created_at).toLocaleDateString() : '');
+                $('#profile-updated').text(data.updated_at ? new Date(data.updated_at).toLocaleDateString() : '');
+                
+                // Avatar actions
+                let avatarHtml = '';
+                if (data.avatar && data.avatar !== 'avatar/default_avatar.png') {
+                    avatarHtml += `<button type="button" class="del-avatar-btn" id="del-avatar-btn">🗑️ Delete Avatar</button>`;
+                }
+                $('#avatar-actions').html(avatarHtml);
+                $('#profile-avatar').val('');
+            });
+        }
+
+        loadProfile();
+
+        $(document).on('click', '#edit-profile-btn', function() {
+            $('#profile-form input[type="text"], #profile-form input[type="email"]').prop('readonly', false);
+            $('#save-profile-btn, #cancel-profile-btn').show();
+            $('#edit-profile-btn').hide();
+        });
+
+        $(document).on('click', '#cancel-profile-btn', function() {
+            $('#profile-form input[type="text"], #profile-form input[type="email"]').prop('readonly', true);
+            $('#save-profile-btn, #cancel-profile-btn').hide();
+            $('#edit-profile-btn').show();
+            $('#profile-fullname').val(userData.name || '');
+            $('#profile-email').val(userData.email || '');
+            $('#profile-address').val(userData.address || '');
+            $('#profile-cell').val(userData.cellphone_number || '');
+            $('#profile-pic').attr('src', userData.avatar || 'avatar/default_avatar.png');
+            $('#profile-msg').html('');
+        });
+
+        $('#profile-avatar').on('change', function(e) {
+            let file = this.files[0];
+            if (file) {
+                let reader = new FileReader();
+                reader.onload = function(ev) {
+                    $('#profile-pic').attr('src', ev.target.result);
+                }
+                reader.readAsDataURL(file);
+                if ($('#save-profile-btn').is(':hidden')) {
+                    $('#profile-form input[type="text"], #profile-form input[type="email"]').prop('readonly', false);
+                    $('#save-profile-btn, #cancel-profile-btn').show();
+                    $('#edit-profile-btn').hide();
+                }
+            }
+        });
+
+        $('#profile-form').on('submit', function(e) {
+            e.preventDefault();
+            let formData = new FormData(this);
+            formData.append('action', 'update');
+            $('#save-profile-btn').prop('disabled', true).text('💾 Saving...');
+            $.ajax({
+                url: '/php/profile_api.php',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                dataType: 'json',
+                success: function(res) {
+                    if (res.success) {
+                        $('#profile-msg').html('<span class="msg-success">✅ Profile updated!</span>');
+                        userData = res.user;
+                        $('#profile-pic').attr('src', res.user.avatar || 'avatar/default_avatar.png');
+                        $('#profile-form input[type="text"], #profile-form input[type="email"]').prop('readonly', true);
+                        $('#save-profile-btn, #cancel-profile-btn').hide();
+                        $('#edit-profile-btn').show();
+                        loadProfile();
+                    } else {
+                        $('#profile-msg').html('<span class="msg-error">❌ ' + (res.error || 'Update failed') + '</span>');
+                    }
+                },
+                error: function() {
+                    $('#profile-msg').html('<span class="msg-error">❌ Server error</span>');
+                },
+                complete: function() {
+                    $('#save-profile-btn').prop('disabled', false).text('💾 Save');
+                }
+            });
+        });
+
+        $(document).on('click', '#del-avatar-btn', function() {
+            if (confirm('Delete your avatar?')) {
+                $.post('/php/profile_api.php', { action: 'delete_avatar' }, function(res) {
+                    loadProfile();
+                    $('#profile-msg').html('<span class="msg-success">✅ Avatar deleted.</span>');
+                }, 'json');
+            }
+        });
+    </script>
+</body>
+</html>

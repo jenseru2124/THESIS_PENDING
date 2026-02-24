@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PO List - Towin's Foodtrip</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&family=Montserrat:wght@900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/po_list.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo-section">
+                <div class="logo-img">
+                    <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo">
+                </div>
+                <div class="logo-info">
+                    <h1>Towin's Foodtrip</h1>
+                    <p>📋 Pending Orders Management</p>
+                </div>
+            </div>
+            <a href="/html/billing.html" class="back-btn">← Back to Billing</a>
+        </div>
+
+        <div class="controls">
+            <div class="search-bar">
+                <input type="search" id="search-po" placeholder="Search by PO #, customer, item, address..." oninput="filterPOs()">
+            </div>
+        </div>
+
+        <div class="stats" id="stats-container">
+            <div class="stat-card">
+                <h3>Total Orders</h3>
+                <div class="number" id="stat-total">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Pending</h3>
+                <div class="number" id="stat-pending">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Assigned</h3>
+                <div class="number" id="stat-assigned">0</div>
+            </div>
+            <div class="stat-card">
+                <h3>Delivered</h3>
+                <div class="number" id="stat-delivered">0</div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Address</th>
+                    <th>Phone</th>
+                    <th>Payment</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="po-list-body"></tbody>
+        </table>
+
+        <p id="no-po-msg">No orders found.</p>
+    </div>
+
+    <script>
+        let poList = [];
+        let allPoList = [];
+
+        function loadPOs() {
+            fetch('/php/get_orders.php')
+                .then(resp => resp.json())
+                .then(list => {
+                    poList = list;
+                    allPoList = list;
+                    renderPOs(poList);
+                    updateStats(poList);
+                })
+                .catch(err => {
+                    console.error('Error loading orders:', err);
+                    document.getElementById('po-list-body').innerHTML = '<tr><td colspan="9">Error loading orders.</td></tr>';
+                });
+        }
+
+        function renderPOs(list) {
+            const tbody = document.getElementById('po-list-body');
+            const noMsg = document.getElementById('no-po-msg');
+
+            if (list.length === 0) {
+                tbody.innerHTML = '';
+                noMsg.style.display = 'block';
+                return;
+            }
+
+            noMsg.style.display = 'none';
+            tbody.innerHTML = '';
+
+            list.forEach(po => {
+                const items = po.order_items || [];
+                const itemSummary = items.length > 0
+                    ? items.map(it => `${it.name} x${it.quantity}`).join(', ')
+                    : 'No items';
+
+                const currentStatus = po.delivery_status || 'pending';
+
+                // Status display - changes based on status
+                let statusDisplay = '';
+                if (currentStatus === 'pending') {
+                    statusDisplay = `
+                        <span class="delivery-status status-pending">
+                            PENDING
+                        </span>
+                    `;
+                } else if (currentStatus === 'assigned') {
+                    statusDisplay = `
+                        <select class="status-dropdown" onchange="updatePOStatus(${po.order_id}, this.value)">
+                            <option value="assigned" selected>Assigned (Pending)</option>
+                            <option value="delivered">Delivered</option>
+                        </select>
+                    `;
+                } else if (currentStatus === 'delivered') {
+                    statusDisplay = `
+                        <span class="delivery-status status-delivered">
+                            DELIVERED ✅
+                        </span>
+                    `;
+                }
+
+                // Payment method badge
+                let paymentBadge = '';
+                if (po.payment_method === 'gcash') {
+                    paymentBadge = '<span class="payment-method-badge payment-gcash">💰 GCash</span>';
+                } else if (po.payment_method === 'cod') {
+                    paymentBadge = '<span class="payment-method-badge payment-cod">💵 COD</span>';
+                } else {
+                    paymentBadge = '<span class="payment-method-badge payment-cod">💵 COD</span>';
+                }
+
+                // Button logic: 
+                // - "Push Rider" only works on PENDING
+                // - "Billing" works on ASSIGNED and DELIVERED
+                const isPending = currentStatus === 'pending';
+                const canBillable = currentStatus === 'assigned' || currentStatus === 'delivered';
+
+                const row = `
+                    <tr>
+                        <td><strong>#${po.order_id}</strong></td>
+                        <td>${po.username || 'N/A'}</td>
+                        <td>
+                            <div class="order-item-summary">${itemSummary}</div>
+                        </td>
+                        <td>₱${parseFloat(po.total_amount).toFixed(2)}</td>
+                        <td style="font-size: 0.9em;">${po.delivery_address || 'N/A'}</td>
+                        <td>${po.phone_number || 'N/A'}</td>
+                        <td>
+                            ${paymentBadge}
+                        </td>
+                        <td>
+                            ${statusDisplay}
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <button class="action-btn push-rider-btn" onclick="pushToRider(${po.order_id})" ${!isPending ? 'disabled' : ''}>
+                                    🏍️ Push Rider
+                                </button>
+                                <button class="action-btn transfer-btn" onclick="transferPO(${po.order_id})" ${!canBillable ? 'disabled' : ''}>
+                                    💳 Billing
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+
+                tbody.innerHTML += row;
+            });
+        }
+
+        function updateStats(list) {
+            const total = list.length;
+            const pending = list.filter(p => p.delivery_status === 'pending').length;
+            const assigned = list.filter(p => p.delivery_status === 'assigned').length;
+            const delivered = list.filter(p => p.delivery_status === 'delivered').length;
+
+            document.getElementById('stat-total').textContent = total;
+            document.getElementById('stat-pending').textContent = pending;
+            document.getElementById('stat-assigned').textContent = assigned;
+            document.getElementById('stat-delivered').textContent = delivered;
+        }
+
+        function updatePOStatus(orderId, newStatus) {
+            fetch('/php/update_rider_order.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `order_id=${encodeURIComponent(orderId)}&status=${encodeURIComponent(newStatus)}`
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Status updated:', data);
+                    loadPOs();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Failed to update'));
+                    loadPOs();
+                }
+            })
+            .catch(err => {
+                alert('Error: ' + err);
+                loadPOs();
+            });
+        }
+
+        function pushToRider(orderId) {
+            if (!confirm('Push this order to the rider?')) return;
+            
+            fetch('/php/push_to_rider.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `order_id=${encodeURIComponent(orderId)}`
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Order assigned to rider:', data);
+                    alert('✅ Assigned to rider!');
+                    loadPOs();
+                } else {
+                    alert('❌ Error: ' + (data.error || 'Failed to push order'));
+                    loadPOs();
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                alert('Error: ' + err);
+            });
+        }
+
+        function transferPO(orderId) {
+            if (!confirm('Transfer this order to Billing System?')) return;
+            
+            console.log('🔄 Transferring order:', orderId);
+            
+            // Step 1: Transfer to billing (stores in session)
+            fetch('/php/transfer_to_billing.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `po_id=${encodeURIComponent(orderId)}`
+            })
+            .then(resp => resp.json())
+            .then(data => {
+                if (data.success) {
+                    console.log('✅ Order transferred to session:', data);
+                    
+                    // Step 2: Delete from po_list
+                    return fetch('/php/delete_order.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: `order_id=${encodeURIComponent(orderId)}`
+                    })
+                    .then(deleteResp => deleteResp.json())
+                    .then(deleteData => {
+                        if (deleteData.success) {
+                            console.log('✅ Order deleted from po_list:', deleteData);
+                            alert('✅ Order transferred to Billing System!');
+                            
+                            // Step 3: Redirect to billing with order data
+                            window.location.href = '/html/billing.html?po_id=' + encodeURIComponent(orderId);
+                        } else {
+                            throw new Error(deleteData.error || 'Failed to delete order');
+                        }
+                    });
+                    
+                } else {
+                    throw new Error(data.error || 'Failed to transfer order');
+                }
+            })
+            .catch(err => {
+                console.error('❌ Error:', err);
+                alert('❌ Error: ' + err.message);
+                // Reload to refresh UI
+                loadPOs();
+            });
+        }
+
+        function filterPOs() {
+            const q = document.getElementById('search-po').value.trim().toLowerCase();
+            if (!q) {
+                renderPOs(allPoList);
+                updateStats(allPoList);
+                return;
+            }
+
+            const filtered = allPoList.filter(po => {
+                const itemString = (po.order_items || [])
+                    .map(it => it.name)
+                    .join(' ')
+                    .toLowerCase();
+
+                return (
+                    String(po.order_id).toLowerCase().includes(q) ||
+                    (po.username || '').toLowerCase().includes(q) ||
+                    (po.delivery_address || '').toLowerCase().includes(q) ||
+                    (po.phone_number || '').toLowerCase().includes(q) ||
+                    itemString.includes(q)
+                );
+            });
+
+            renderPOs(filtered);
+            updateStats(filtered);
+        }
+
+        // Initial load
+        console.log('🚀 PO List initialized');
+        loadPOs();
+        
+        // Refresh every 5 seconds
+        setInterval(loadPOs, 5000);
+    </script>
+</body>
+</html>

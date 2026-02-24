@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Towin's Foodtrip - Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+     <link rel="stylesheet" href="/css/login.css">
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-container">
+            <div class="logo-section">
+                <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo" class="login-logo-top">
+                <h1>Towin's Foodtrip</h1>
+                <p class="subtitle">Welcome back! Please login to your account</p>
+            </div>
+
+            <div id="message-container"></div>
+
+            <form id="loginForm" action="/php/login.php" method="POST" autocomplete="off">
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="text" 
+                            id="username"
+                            name="username"
+                            placeholder="Enter your username" 
+                            required 
+                            autocomplete="username"
+                        >
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <div class="input-wrapper">
+                        <input 
+                            type="password" 
+                            id="password"
+                            name="password"
+                            placeholder="Enter your password" 
+                            required 
+                            autocomplete="current-password"
+                        >
+                        <button type="button" class="password-toggle" id="password-toggle" onclick="togglePassword()">👁️</button>
+                    </div>
+                </div>
+
+                <button type="submit" id="loginBtn">Sign In</button>
+            </form>
+
+            <div class="links-section">
+                <div class="forgot-link">
+                    <a href="/html/forgot_password.html">Forgot password?</a>
+                </div>
+            </div>
+
+            <div class="register-section">
+                <p class="register-text">Don't have an account?</p>
+                <p class="register-link">
+                    <a href="/html/register.html">Create account</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Toggle password visibility
+        function togglePassword() {
+            const passwordInput = document.getElementById('password');
+            const passwordToggle = document.getElementById('password-toggle');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                passwordToggle.textContent = '🙈';
+                passwordToggle.title = 'Hide password';
+            } else {
+                passwordInput.type = 'password';
+                passwordToggle.textContent = '👁️';
+                passwordToggle.title = 'Show password';
+            }
+        }
+
+        // Check if already logged in
+        function checkSession() {
+            fetch('/php/check_session.php')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.logged_in) {
+                        if (data.role === 'admin') {
+                            window.location.href = '/html/billing.html';
+                        } else if (data.role === 'rider' || data.is_rider == 1) {
+                            window.location.href = '/html/rider_dashboard.html';
+                        } else {
+                            window.location.href = '/html/online_ordering.html';
+                        }
+                    }
+                })
+                .catch(error => console.log('Ready for login'));
+        }
+
+        // Display messages from URL
+        function displayMessages() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const messageContainer = document.getElementById('message-container');
+
+            if (urlParams.has('error')) {
+                const error = decodeURIComponent(urlParams.get('error'));
+                messageContainer.innerHTML = `<div class="message error">${error}</div>`;
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            if (urlParams.has('success')) {
+                const success = decodeURIComponent(urlParams.get('success'));
+                messageContainer.innerHTML = `<div class="message success">${success}</div>`;
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const loginBtn = document.getElementById('loginBtn');
+            loginBtn.disabled = true;
+            loginBtn.textContent = '⏳ Signing in...';
+        });
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkSession();
+            displayMessages();
+        });
+    </script>
+</body>
+</html>

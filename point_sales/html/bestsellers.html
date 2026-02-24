@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Best Sellers Analytics</title>
+   <link rel="stylesheet" href="/css/bestsellers.css">
+</head>
+
+<body>
+    <div class="container">
+        <div class="logo-img">
+            <!-- Replace with your actual logo path -->
+            <img src="towins_logo.jpg" alt="Towin's Foodtrip Logo" />
+        </div>
+        <button class="back-btn" onclick="window.location.href='/html/billing.html'">← Back</button>
+        <h1>Best Sellers</h1>
+        <form id="filterForm">
+            <div class="filter-row">
+                <label>Year:</label>
+                <select id="year" name="year"></select>
+                <label>Month:</label>
+                <select id="month" name="month">
+                    <option value="">All</option>
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                </select>
+                <label>Day:</label>
+                <select id="day" name="day">
+                    <option value="">All</option>
+                </select>
+                <label>Category:</label>
+                <select id="category" name="category">
+                    <option value="">All</option>
+                </select>
+                <button type="submit">Filter</button>
+            </div>
+        </form>
+        <div id="summary"></div>
+        <div id="results"></div>
+    </div>
+    <script>
+        // Populate year, day, category dropdowns
+        (() => {
+            const yearSel = document.getElementById('year');
+            const nowYear = new Date().getFullYear();
+            for (let y = nowYear; y >= nowYear - 5; y--) {
+                let o = document.createElement('option');
+                o.value = y;
+                o.text = y;
+                yearSel.appendChild(o);
+            }
+            yearSel.value = nowYear;
+
+            const daySel = document.getElementById('day');
+            for (let d = 1; d <= 31; d++) {
+                let o = document.createElement('option');
+                o.value = d;
+                o.text = d;
+                daySel.appendChild(o);
+            }
+        })();
+
+        // Load categories for selector (AJAX)
+        function loadCategories() {
+            fetch('/php/bestsellers.php')
+                .then(r => r.json())
+                .then(data => {
+                    if (!Array.isArray(data)) return;
+                    const catSel = document.getElementById('category');
+                    let cats = [];
+                    data.forEach(row => {
+                        if (row.category && !cats.includes(row.category)) cats.push(row.category);
+                    });
+                    cats.sort();
+                    catSel.innerHTML = '<option value="">All</option>';
+                    cats.forEach(cat => {
+                        const o = document.createElement('option');
+                        o.value = cat;
+                        o.text = cat;
+                        catSel.appendChild(o);
+                    });
+                });
+        }
+        loadCategories();
+
+        document.getElementById('filterForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            showBestSellers();
+        });
+
+        function showBestSellers() {
+            const year = document.getElementById('year').value;
+            const month = document.getElementById('month').value;
+            const day = document.getElementById('day').value;
+            const category = document.getElementById('category').value;
+            const params = new URLSearchParams();
+            if (year) params.append('year', year);
+            if (month) params.append('month', month);
+            if (day) params.append('day', day);
+            if (category) params.append('category', category);
+
+            fetch('/php/bestsellers.php?' + params.toString())
+                .then(response => response.json())
+                .then(data => {
+                    // Error handling
+                    if (!Array.isArray(data)) {
+                        document.getElementById('results').innerHTML = `<p style="color:red;">${data.error || "An error occurred."}</p>`;
+                        document.getElementById('summary').innerHTML = '';
+                        return;
+                    }
+
+                    // Summary
+                    let s = [];
+                    if (year) s.push('Year: ' + year);
+                    if (month) {
+                        const monthText = document.getElementById('month').options[document.getElementById('month').selectedIndex].text;
+                        s.push('Month: ' + monthText);
+                    }
+                    if (day) s.push('Day: ' + day);
+                    if (category) {
+                        const catText = document.getElementById('category').options[document.getElementById('category').selectedIndex].text;
+                        s.push('Category: ' + catText);
+                    }
+                    document.getElementById('summary').innerHTML = s.length ? `<b>Showing for:</b> ${s.join(', ')}` : '';
+
+                    // Table
+                    const resultsDiv = document.getElementById('results');
+                    resultsDiv.innerHTML = '';
+                    if (data.length > 0) {
+                        let table = `<table><thead>
+                            <tr>
+                                <th>Category</th>
+                                <th>Item Name</th>
+                                <th>Quantity</th>
+                                <th>Total Revenue (PHP)</th>
+                            </tr>
+                        </thead><tbody>`;
+                        data.forEach(row => {
+                            table += `<tr>
+                                <td>${row.category}</td>
+                                <td>${row.item_name}</td>
+                                <td>${row.total_quantity}</td>
+                                <td>₱${parseFloat(row.total_revenue).toLocaleString(undefined, {minimumFractionDigits:2})}</td>
+                            </tr>`;
+                        });
+                        table += '</tbody></table>';
+                        resultsDiv.innerHTML = table;
+                    } else {
+                        resultsDiv.innerHTML = '<p>No best sellers found for this filter.</p>';
+                    }
+                });
+        }
+
+        // Initial load
+        showBestSellers();
+    </script>
+</body>
+</html>

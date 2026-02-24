@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>My Orders - Towin's Foodtrip</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@900&family=Montserrat:wght@900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/my_orders.css">
+</head>
+<body>
+    <div class="main-layout">
+        <!-- SIDEBAR NAVIGATION -->
+        <nav class="sidebar">
+            <div class="sidebar-logo">
+                <img src="towins_logo.jpg" alt="Towin's Foodtrip logo">
+            </div>
+            
+            <div class="logo-section">
+                <div class="logo-title">Towin's</div>
+                <div class="sidebar-desc">FOODTRIP<br>PORK SISIG • GOTO PARES</div>
+            </div>
+
+            <div class="sidebar-nav">
+                <a href="/html/online_ordering.html">🛍️ Online Order</a>
+                <a href="/html/profile.html">👤 My Profile</a>
+                <a href="/html/my_orders.html" class="active">📦 My Orders</a>
+            </div>
+
+            <a href="/html/index.html" class="logout-btn">🚪 Logout</a>
+        </nav>
+
+        <!-- CONTENT AREA -->
+        <div class="content-area">
+            <div class="container">
+                <h1>📦 My Orders</h1>
+                
+                <div class="orders-grid" id="orders-grid"></div>
+                <p id="no-orders-msg">You have no orders yet. <a href="/html/online_ordering.html" style="color:#b23b21;font-weight:600;text-decoration:underline;">Start ordering!</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let allOrders = [];
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric'
+            }) + ' ' + date.toLocaleTimeString('en-US', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
+        function getPaymentBadge(method) {
+            if (method === 'gcash') {
+                return '<span style="color:#667eea;font-weight:700;">💰 GCash</span>';
+            } else if (method === 'cod') {
+                return '<span style="color:#28a745;font-weight:700;">💵 Cash on Delivery</span>';
+            }
+            return '';
+        }
+
+        function loadMyOrders() {
+            fetch('/php/my_orders_api.php')
+                .then(resp => resp.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('no-orders-msg').style.display = 'block';
+                        return;
+                    }
+                    allOrders = data;
+                    renderOrders(data);
+                })
+                .catch(err => {
+                    console.error('Error loading orders:', err);
+                    document.getElementById('no-orders-msg').style.display = 'block';
+                });
+        }
+
+        function renderOrders(orders) {
+            const grid = document.getElementById('orders-grid');
+            const noMsg = document.getElementById('no-orders-msg');
+            
+            if (!orders || orders.length === 0) {
+                grid.innerHTML = '';
+                noMsg.style.display = 'block';
+                return;
+            }
+
+            noMsg.style.display = 'none';
+            grid.innerHTML = '';
+
+            orders.forEach(order => {
+                const items = order.order_items || [];
+                const itemsHtml = items.map(item => 
+                    `<li>${item.name} <strong>x${item.quantity}</strong></li>`
+                ).join('');
+
+                const statusClass = order.status === 'pending' ? 'status-pending' : 'status-completed';
+                
+                const html = `
+                    <div class="order-card">
+                        <div class="order-header">
+                            <div class="order-id">Order #${order.order_id}</div>
+                            <span class="order-status ${statusClass}">${order.status || 'pending'}</span>
+                        </div>
+                        
+                        <div class="order-details">
+                            <div class="detail-row">
+                                <span class="detail-label">📅 Date:</span>
+                                <span>${formatDate(order.order_time)}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">📍 Address:</span>
+                                <span>${order.delivery_address || 'N/A'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">📱 Phone:</span>
+                                <span>${order.phone_number || 'N/A'}</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">💳 Payment:</span>
+                                <span>${getPaymentBadge(order.payment_method)}</span>
+                            </div>
+                        </div>
+
+                        <div class="order-items">
+                            <h4>📋 Items:</h4>
+                            <ul class="item-list">
+                                ${itemsHtml}
+                            </ul>
+                        </div>
+
+                        <div class="order-total">
+                            Total: ₱${parseFloat(order.total_amount).toFixed(2)}
+                        </div>
+
+                        <div class="order-actions">
+                            <button class="order-btn reorder-btn" onclick="reorder(${order.order_id})">🔄 Reorder</button>
+                            <button class="order-btn delete-btn" onclick="deleteOrder(${order.order_id})">🗑️ Delete</button>
+                        </div>
+                    </div>
+                `;
+
+                grid.innerHTML += html;
+            });
+        }
+
+        function reorder(orderId) {
+            fetch('/php/my_orders_api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=reorder&order_id=${encodeURIComponent(orderId)}`
+            })
+            .then(resp => resp.json())
+            .then(res => {
+                if (res.success) {
+                    window.location.href = '/html/online_ordering.html';
+                } else {
+                    alert('Failed to reorder: ' + (res.error || 'Unknown error'));
+                }
+            })
+            .catch(err => alert('Error: ' + err));
+        }
+
+        function deleteOrder(orderId) {
+            if (!confirm('Are you sure you want to delete this order?')) return;
+            
+            fetch('/php/my_orders_api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `action=delete&order_id=${encodeURIComponent(orderId)}`
+            })
+            .then(resp => resp.json())
+            .then(res => {
+                if (res.success) {
+                    loadMyOrders();
+                } else {
+                    alert('Failed to delete order');
+                }
+            })
+            .catch(err => alert('Error: ' + err));
+        }
+
+        // Load orders on page load
+        loadMyOrders();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadMyOrders, 30000);
+    </script>
+</body>
+</html>
